@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Magnum Force Online — Original Style Map</title>
+  <title>Magnum Force Online — Classic Maze Edition</title>
   <style>
     :root {
       --bg:#101010; --panel:#1f1f1f; --ink:#f4f4f4; --muted:#cfcfcf;
-      --yellow:#f5e64a; --red:#e31b23; --blue:#1677d2; --purple:#9a3ba5; --green:#159447;
+      --yellow:#f6e44c; --red:#e31b23; --blue:#1677d2; --purple:#9a3ba5; --green:#159447;
     }
     * { box-sizing:border-box; }
     body {
       margin:0;
-      background:radial-gradient(circle at top,#333,#111 50%,#050505);
+      background:radial-gradient(circle at top,#373737,#111 52%,#050505);
       color:var(--ink);
       font-family:Arial,Helvetica,sans-serif;
     }
-    .page { max-width:1320px; margin:0 auto; padding:14px; }
+    .page { max-width:1380px; margin:0 auto; padding:14px; }
     h1 {
       margin:4px 0 0;
       text-align:center;
@@ -28,10 +28,13 @@
       text-shadow:3px 3px 0 #000, 5px 5px 0 #fff;
       -webkit-text-stroke:1px #000;
     }
-    .subtitle { text-align:center; color:var(--muted); margin:6px 0 14px; line-height:1.35; }
-    .layout { display:grid; grid-template-columns:minmax(360px,860px) minmax(330px,1fr); gap:16px; align-items:start; }
+    .subtitle {
+      text-align:center; color:var(--muted); margin:6px 0 14px; line-height:1.35;
+      max-width:1000px; margin-left:auto; margin-right:auto;
+    }
+    .layout { display:grid; grid-template-columns:minmax(360px,900px) minmax(330px,1fr); gap:16px; align-items:start; }
     canvas {
-      width:100%; max-width:840px; aspect-ratio:1/1;
+      width:100%; max-width:900px; aspect-ratio:1/1;
       background:var(--yellow); border:6px solid #050505;
       box-shadow:0 0 0 4px #777, 0 12px 34px rgba(0,0,0,.55);
       display:block; margin:0 auto; touch-action:manipulation;
@@ -89,27 +92,30 @@
     }
     .modal.show { display:flex; }
     .modal-card {
-      max-width:600px; width:100%; background:#1c1c1c; border:3px solid #777;
+      max-width:620px; width:100%; background:#1c1c1c; border:3px solid #777;
       border-radius:14px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.6);
     }
     .target-list { display:grid; gap:8px; margin-top:10px; }
-    @media (max-width:1050px) { .layout{grid-template-columns:1fr;} }
+    @media (max-width:1080px) { .layout{grid-template-columns:1fr;} }
   </style>
 </head>
 <body>
 <div class="page">
   <h1>MAGNUM FORCE!</h1>
   <div class="subtitle">
-    Original-style city map edition: larger board, larger hospitals and bullet shops, multi-door buildings, and manhole teleporting.
+    Classic Maze Edition: a denser handcrafted city board with single-tile street corridors,
+    more distinct building graphics, larger hospitals and bullet shops, multi-door buildings,
+    and manhole teleports across the map.
   </div>
 
   <div class="layout">
     <div>
-      <canvas id="board" width="840" height="840" aria-label="Magnum Force board"></canvas>
+      <canvas id="board" width="900" height="900" aria-label="Magnum Force board"></canvas>
       <div class="rules">
-        <strong>Map rules:</strong> Buildings, hospitals, and bullet shops can only be entered or exited through marked doors.
-        Once you enter a building, hospital, or bullet shop, you cannot enter and leave that structure in the same turn.
-        Landing exactly on a manhole teleports you to another manhole.
+        <strong>Board rules:</strong> streets are single-tile corridors between dense city blocks.
+        Structures may only be entered and exited through green door tiles. Once you enter a structure,
+        you cannot leave that same structure until a later turn. Landing exactly on a manhole teleports
+        you across the city.
       </div>
     </div>
 
@@ -140,14 +146,16 @@
       <div id="turnInfo" class="small">Waiting for room.</div>
 
       <div class="legend">
-        <span><i class="swatch" style="background:#f5e64a"></i> Street</span>
-        <span><i class="swatch" style="background:#333"></i> Building</span>
-        <span><i class="swatch" style="background:#fffbdb"></i> Hospital</span>
-        <span><i class="swatch" style="background:#795548"></i> Bullet Shop</span>
-        <span><i class="swatch" style="background:#00a3ff"></i> Spy Card</span>
+        <span><i class="swatch" style="background:#f6e44c"></i> Street</span>
+        <span><i class="swatch" style="background:#3b536a"></i> Hotel / Tower</span>
+        <span><i class="swatch" style="background:#3d7b4f"></i> Bank / Office</span>
+        <span><i class="swatch" style="background:#fffbdf"></i> Hospital</span>
+        <span><i class="swatch" style="background:#8b5a3c"></i> Bullet Shop</span>
+        <span><i class="swatch" style="background:#7e4a91"></i> Club / Safe House</span>
+        <span><i class="swatch" style="background:#555"></i> Warehouse / Garage</span>
+        <span><i class="swatch" style="background:#00a3ff"></i> Spy</span>
         <span><i class="swatch" style="background:#111"></i> Manhole</span>
         <span><i class="swatch" style="background:#ff8c00"></i> Police</span>
-        <span><i class="swatch" style="background:#9b111e"></i> Road Block</span>
       </div>
 
       <div id="log" class="log"></div>
@@ -182,8 +190,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const GRID = 21;
-const TILE = 40;
+const GRID = 25;
+const TILE = 36;
 const MAX_WOUNDS = 6;
 
 const boardCanvas = document.getElementById("board");
@@ -220,9 +228,9 @@ let state = null;
 
 const AGENTS = [
   { name:"K.G.B.", color:"#e31b23", start:{x:0,y:0} },
-  { name:"D.I.6.", color:"#1677d2", start:{x:0,y:20} },
-  { name:"C.I.A.", color:"#9a3ba5", start:{x:20,y:0} },
-  { name:"GEPO", color:"#159447", start:{x:20,y:20} }
+  { name:"D.I.6.", color:"#1677d2", start:{x:0,y:24} },
+  { name:"C.I.A.", color:"#9a3ba5", start:{x:24,y:0} },
+  { name:"GEPO", color:"#159447", start:{x:24,y:24} }
 ];
 
 const CARD_DEFS = [
@@ -315,87 +323,119 @@ async function saveState() {
 }
 
 function createInitialState(count) {
-  const tiles = makeOriginalStyleBoardTiles();
+  const tiles = makeClassicMazeBoard();
   const players = AGENTS.slice(0, count).map(a => ({
-    name:a.name, color:a.color, pos:{...a.start}, bullets:3, wounds:0, cards:[],
-    eliminated:false, arrested:false, vest:false, controlledBy:null,
+    name:a.name,
+    color:a.color,
+    pos:{...a.start},
+    bullets:3,
+    wounds:0,
+    cards:[],
+    eliminated:false,
+    arrested:false,
+    vest:false,
+    controlledBy:null,
     structureEnteredThisTurn:null
   }));
   return {
-    mapVersion:"original-style-21x21",
+    mapVersion:"classic-maze-25x25",
     tiles,
     players,
     current:0,
     phase:"ready",
     movementLeft:0,
     lastRoll:null,
-    roadBlocks:[{x:9,y:0},{x:11,y:20},{x:0,y:10},{x:20,y:10}],
+    roadBlocks:[{x:12,y:0},{x:0,y:12},{x:24,y:12},{x:12,y:24}],
     deck:shuffle([...CARD_DEFS]),
     discard:[],
     extraTurn:false,
     winner:null,
-    log:["New original-style online game started. Larger map, doors, hospitals, bullet shops, and manholes are active."]
+    log:["New Classic Maze Edition game started. Dense city blocks, single-lane streets, multi-door buildings, and manholes are active."]
   };
 }
 
-function makeOriginalStyleBoardTiles() {
+function makeClassicMazeBoard() {
   const tiles = Array.from({length:GRID}, () => Array.from({length:GRID}, () => ({
-    type:"street",
+    type:"road",
     structureId:null,
     door:false,
-    label:null
+    label:null,
+    subtype:null
   })));
 
   function set(x,y,data) {
     if (x>=0 && x<GRID && y>=0 && y<GRID) tiles[y][x] = {...tiles[y][x], ...data};
   }
 
-  function rect(id, type, x1, y1, x2, y2, label) {
-    for (let y=y1; y<=y2; y++) {
-      for (let x=x1; x<=x2; x++) {
-        set(x,y,{type, structureId:id, label});
-      }
-    }
+  function fillRect(x1,y1,x2,y2,data) {
+    for (let y=y1; y<=y2; y++) for (let x=x1; x<=x2; x++) set(x,y,data);
   }
 
-  function door(x,y) {
-    if (x>=0 && x<GRID && y>=0 && y<GRID) tiles[y][x].door = true;
-  }
+  // First make everything road, then densely place structures with only single-tile corridors between them.
+  // Top band
+  fillRect(1,1,4,4,{type:"building",structureId:"hotel_nw",subtype:"hotel",label:"HOTEL"});
+  fillRect(6,1,9,4,{type:"building",structureId:"bank_n",subtype:"bank",label:"BANK"});
+  fillRect(11,1,13,5,{type:"hospital",structureId:"hospital_n",subtype:"hospital",label:"HOSPITAL"});
+  fillRect(15,1,18,4,{type:"building",structureId:"tower_n",subtype:"tower",label:"TOWER"});
+  fillRect(20,1,23,4,{type:"building",structureId:"club_ne",subtype:"club",label:"CLUB"});
 
-  // Large multi-tile structures inspired by the original board's dense city layout.
-  rect("b_nw1","building",2,1,5,3,"HOTEL"); door(2,2); door(5,2);
-  rect("b_nw2","building",7,1,9,4,"BANK"); door(8,4); door(7,2); door(9,2);
-  rect("b_ne1","building",12,1,15,3,"TOWER"); door(12,2); door(15,2);
-  rect("b_ne2","building",17,1,19,5,"CLUB"); door(18,5); door(17,3);
+  // Mid-upper
+  fillRect(1,6,4,9,{type:"building",structureId:"warehouse_w1",subtype:"warehouse",label:"WAREHOUSE"});
+  fillRect(6,6,9,9,{type:"bullets",structureId:"bullets_w",subtype:"bullets",label:"BULLETS"});
+  fillRect(11,7,13,9,{type:"building",structureId:"office_c1",subtype:"office",label:"OFFICE"});
+  fillRect(15,6,18,9,{type:"building",structureId:"safehouse_e1",subtype:"safehouse",label:"SAFE HOUSE"});
+  fillRect(20,6,23,9,{type:"building",structureId:"garage_e1",subtype:"garage",label:"GARAGE"});
 
-  rect("h_w","hospital",1,6,4,8,"HOSPITAL"); door(4,7); door(2,6); door(2,8);
-  rect("ammo_w","bullets",6,6,8,8,"BULLETS"); door(6,7); door(8,7);
+  // Center band
+  fillRect(2,11,5,13,{type:"hospital",structureId:"hospital_w",subtype:"hospital",label:"HOSPITAL"});
+  fillRect(7,11,10,14,{type:"building",structureId:"depot_cw",subtype:"warehouse",label:"DEPOT"});
+  fillRect(12,11,14,14,{type:"road",structureId:null,subtype:null,label:null}); // central road plaza / corridor
+  fillRect(16,11,18,14,{type:"building",structureId:"office_ce",subtype:"office",label:"OFFICE"});
+  fillRect(20,11,23,13,{type:"hospital",structureId:"hospital_e",subtype:"hospital",label:"HOSPITAL"});
 
-  rect("b_mid1","building",10,6,12,8,"OFFICE"); door(10,7); door(12,7); door(11,8);
-  rect("h_e","hospital",15,6,19,8,"HOSPITAL"); door(15,7); door(17,6); door(17,8);
+  // Mid-lower
+  fillRect(1,15,4,18,{type:"building",structureId:"bank_sw",subtype:"bank",label:"BANK"});
+  fillRect(6,16,9,19,{type:"building",structureId:"hotel_s",subtype:"hotel",label:"HOTEL"});
+  fillRect(11,15,13,18,{type:"police",structureId:"police_s",subtype:"police",label:"POLICE"});
+  fillRect(15,16,18,19,{type:"bullets",structureId:"bullets_e",subtype:"bullets",label:"BULLETS"});
+  fillRect(20,15,23,18,{type:"building",structureId:"tower_se",subtype:"tower",label:"TOWER"});
 
-  rect("b_sw1","building",2,12,5,15,"WAREHOUSE"); door(2,13); door(5,13); door(4,15);
-  rect("b_c1","building",7,11,9,14,"DEPOT"); door(8,11); door(7,13); door(9,13);
-  rect("b_c2","building",11,11,13,14,"SAFE HOUSE"); door(12,11); door(11,13); door(13,13);
-  rect("b_se1","building",15,12,18,15,"GARAGE"); door(15,13); door(18,13); door(17,15);
+  // Bottom band
+  fillRect(1,20,4,23,{type:"building",structureId:"garage_sw",subtype:"garage",label:"GARAGE"});
+  fillRect(6,21,9,23,{type:"building",structureId:"safehouse_s",subtype:"safehouse",label:"SAFE HOUSE"});
+  fillRect(11,20,14,23,{type:"building",structureId:"warehouse_s",subtype:"warehouse",label:"WAREHOUSE"});
+  fillRect(16,20,18,23,{type:"building",structureId:"office_s",subtype:"office",label:"OFFICE"});
+  fillRect(20,20,23,23,{type:"building",structureId:"club_se",subtype:"club",label:"CLUB"});
 
-  rect("ammo_s","bullets",7,17,9,19,"BULLETS"); door(8,17); door(7,18); door(9,18);
-  rect("police","police",11,17,13,19,"POLICE"); door(12,17); door(11,18); door(13,18);
+  // Doors — all are on structure tiles adjacent to roads.
+  const doors = [
+    [1,2],[4,3], [7,1],[9,3], [12,1],[11,3],[13,5], [15,2],[18,3], [21,4],[20,2],
 
-  // Spy-card spaces on streets.
+    [1,8],[4,7], [6,7],[9,8], [11,8],[13,7], [15,7],[18,8], [21,6],[23,8],
+
+    [2,11],[5,12], [8,11],[10,13], [16,12],[18,13], [20,12],[23,12],
+
+    [1,16],[4,17], [6,18],[9,16], [12,15],[11,17],[13,18], [15,17],[18,18], [20,16],[23,17],
+
+    [1,21],[4,22], [6,22],[9,21], [11,21],[14,22], [16,22],[18,21], [20,22],[23,21]
+  ];
+  doors.forEach(([x,y]) => {
+    if (tiles[y][x].structureId) tiles[y][x].door = true;
+  });
+
+  // Special road tiles
   const spySquares = [
-    [10,0],[0,5],[20,5],[5,10],[15,10],[0,15],[20,15],[10,20]
+    [0,6],[0,18],[6,0],[18,0],[24,6],[24,18],[6,24],[18,24]
   ];
-  spySquares.forEach(([x,y]) => set(x,y,{type:"spy", label:"SPY"}));
+  spySquares.forEach(([x,y]) => set(x,y,{type:"spy",label:"SPY",subtype:"spy"}));
 
-  // Manholes placed around the city. Landing exactly on one teleports to another.
   const manholes = [
-    [3,5],[10,5],[17,5],[3,10],[10,10],[17,10],[3,17],[17,17]
+    [5,5],[12,6],[19,5],[5,12],[19,12],[5,19],[12,19],[19,19]
   ];
-  manholes.forEach(([x,y]) => set(x,y,{type:"manhole", label:"MH"}));
+  manholes.forEach(([x,y]) => set(x,y,{type:"manhole",label:"MH",subtype:"manhole"}));
 
-  // Keep starts clear.
-  for (const a of AGENTS) set(a.start.x,a.start.y,{type:"street", structureId:null, door:false, label:null});
+  // Keep starts and central road network clear
+  for (const a of AGENTS) set(a.start.x,a.start.y,{type:"road",structureId:null,door:false,label:null,subtype:null});
 
   return tiles;
 }
@@ -484,29 +524,34 @@ function shoot() {
   if (!isMyTurn() || state.phase !== "ready") return;
   const p = currentPlayer();
   if (p.bullets <= 0) return addLogAndSave(`${p.name} has no bullets.`);
-  chooseTarget("Shoot enemy agent", "Roll two dice. If roll equals or exceeds distance, target takes 1 wound. Costs 1 bullet.", enemiesOf(p), targetIndex => {
-    const target = state.players[targetIndex];
-    if (isInsideStructure(p.pos)) {
-      addLog(`${p.name} cannot shoot while hiding inside a structure.`);
+  chooseTarget(
+    "Shoot enemy agent",
+    "Roll two dice. If roll equals or exceeds distance, target takes 1 wound. Shooting costs 1 bullet.",
+    enemiesOf(p),
+    targetIndex => {
+      const target = state.players[targetIndex];
+      if (isInsideStructure(p.pos)) {
+        addLog(`${p.name} cannot shoot while hiding inside a structure.`);
+        saveState();
+        return;
+      }
+      if (isInsideStructure(target.pos)) {
+        addLog(`${target.name} is inside a structure and cannot be shot without Magnum Force.`);
+        saveState();
+        return;
+      }
+      const dice = rollDice();
+      const range = dice[0] + dice[1];
+      const dist = distance(p.pos, target.pos);
+      p.bullets -= 1;
+      state.lastRoll = dice;
+      addLog(`${p.name} fires at ${target.name}: rolled ${range}, distance ${dist}.`);
+      if (range >= dist) wound(target, 1, `${p.name}'s shot`);
+      else addLog("The shot missed.");
+      finishAction();
       saveState();
-      return;
     }
-    if (isInsideStructure(target.pos)) {
-      addLog(`${target.name} is inside a structure and cannot be shot without Magnum Force.`);
-      saveState();
-      return;
-    }
-    const dice = rollDice();
-    const range = dice[0] + dice[1];
-    const dist = distance(p.pos, target.pos);
-    p.bullets -= 1;
-    state.lastRoll = dice;
-    addLog(`${p.name} fires at ${target.name}: rolled ${range}, distance ${dist}.`);
-    if (range >= dist) wound(target, 1, `${p.name}'s shot`);
-    else addLog("The shot missed.");
-    finishAction();
-    saveState();
-  });
+  );
 }
 
 function useCardMenu() {
@@ -576,7 +621,7 @@ function useCard(cardIndex) {
   }
 
   if (card.action === "magnumForce") {
-    chooseTarget("Magnum Force!", "Choose an enemy in a building, hospital, bullet shop, or police station and within dice-roll range.", enemiesOf(p), targetIndex => {
+    chooseTarget("Magnum Force!", "Choose an enemy in a structure and within dice-roll range.", enemiesOf(p), targetIndex => {
       const target = state.players[targetIndex];
       if (!isInsideStructure(target.pos)) return addLogAndSave(`${target.name} is not inside a structure.`);
       const dice = rollDice();
@@ -595,7 +640,7 @@ function useCard(cardIndex) {
   if (card.action === "chopperLift") {
     state.phase = "choosing-chopper";
     discardCard(p, cardIndex);
-    addLog(`${p.name} uses Chopper Lift. Click any open street, spy, manhole, or road square.`);
+    addLog(`${p.name} uses Chopper Lift. Click any open non-structure square.`);
     saveState();
     return;
   }
@@ -603,7 +648,7 @@ function useCard(cardIndex) {
   if (card.action === "roadBlock") {
     state.phase = "choosing-roadblock";
     discardCard(p, cardIndex);
-    addLog(`${p.name} uses Road Block. Click any open street square.`);
+    addLog(`${p.name} uses Road Block. Click any open road square.`);
     saveState();
   }
 }
@@ -631,7 +676,9 @@ function drawSpyCard(p) {
 
 function applyInstantCard(p, card) {
   switch(card.action) {
-    case "selfWound": wound(p, card.amount, card.name); break;
+    case "selfWound":
+      wound(p, card.amount, card.name);
+      break;
     case "loseBullets": {
       const lost = Math.min(p.bullets, card.amount);
       p.bullets -= lost;
@@ -662,7 +709,7 @@ function applyInstantCard(p, card) {
       break;
     }
     case "arrested":
-      p.pos = findTile("police") || {x:12,y:18};
+      p.pos = findTile("police") || {x:12,y:17};
       p.arrested = true;
       addLog(`${p.name} is taken to the Police Station.`);
       break;
@@ -751,11 +798,6 @@ function resolveSquare(p) {
 function teleportManhole(p) {
   const manholes = allTilesOfType("manhole").filter(m => !same(m, p.pos));
   if (!manholes.length) return;
-  chooseManholeDestination(p, manholes);
-}
-
-function chooseManholeDestination(p, manholes) {
-  // Current implementation: random destination to keep online state simple and avoid interrupting the move with another modal.
   const dest = manholes[Math.floor(Math.random()*manholes.length)];
   p.pos = {...dest};
   addLog(`${p.name} drops through a manhole and emerges at ${dest.x},${dest.y}.`);
@@ -796,8 +838,8 @@ function onCanvasClick(event) {
   }
 
   if (state.phase === "choosing-roadblock") {
-    if (tile(pos).type !== "street" || playerAt(pos) !== -1 || isRoadBlock(pos)) {
-      return addLogAndSave("Road block must be placed on an open street square.");
+    if (tile(pos).type !== "road" || playerAt(pos) !== -1 || isRoadBlock(pos)) {
+      return addLogAndSave("Road block must be placed on an open road square.");
     }
     state.roadBlocks.push(pos);
     addLog(`${p.name} places a road block.`);
@@ -829,32 +871,18 @@ function canMoveTo(player, pos) {
   const fromStruct = from.structureId;
   const toStruct = to.structureId;
 
-  // Street/special non-structure movement.
   if (!fromStruct && !toStruct) return {ok:true};
-
-  // Entering a structure from the street must use a marked door.
   if (!fromStruct && toStruct) {
-    if (!to.door) return {ok:false, reason:"You must enter that structure through a marked door."};
+    if (!to.door) return {ok:false, reason:"You must enter that structure through a marked green door."};
     return {ok:true};
   }
-
-  // Moving within the same structure is allowed.
   if (fromStruct && toStruct && fromStruct === toStruct) return {ok:true};
-
-  // Moving directly from one structure to another is not allowed.
-  if (fromStruct && toStruct && fromStruct !== toStruct) {
-    return {ok:false, reason:"You must leave the current structure before entering another."};
-  }
-
-  // Exiting a structure must leave from a marked door tile, and cannot be in same turn as entry.
+  if (fromStruct && toStruct && fromStruct !== toStruct) return {ok:false, reason:"You must leave the current structure before entering another."};
   if (fromStruct && !toStruct) {
-    if (!from.door) return {ok:false, reason:"You must exit from a marked door."};
-    if (player.structureEnteredThisTurn === fromStruct) {
-      return {ok:false, reason:"You cannot enter and leave the same structure in one turn."};
-    }
+    if (!from.door) return {ok:false, reason:"You must exit from a marked green door."};
+    if (player.structureEnteredThisTurn === fromStruct) return {ok:false, reason:"You cannot enter and leave the same structure in one turn."};
     return {ok:true};
   }
-
   return {ok:true};
 }
 
@@ -890,9 +918,9 @@ function renderSidePanel() {
 
   let info = "";
   if (state.lastRoll) info += `Last dice roll: ${state.lastRoll[0]} + ${state.lastRoll[1]} = ${state.lastRoll[0]+state.lastRoll[1]}<br>`;
-  if (state.phase === "moving") info += `Movement left: ${state.movementLeft}. Current player clicks adjacent squares.<br>`;
-  if (state.phase === "choosing-roadblock") info += `Road Block: current player clicks an open street square.<br>`;
-  if (state.phase === "choosing-chopper") info += `Chopper Lift: current player clicks an open non-structure square.<br>`;
+  if (state.phase === "moving") info += `Movement left: ${state.movementLeft}. Current player clicks adjacent highlighted squares.<br>`;
+  if (state.phase === "choosing-roadblock") info += `Road Block: click an open road square.<br>`;
+  if (state.phase === "choosing-chopper") info += `Chopper Lift: click an open non-structure square.<br>`;
   turnInfoEl.innerHTML = info || "Choose an action when it is your agent's turn.";
 
   logEl.innerHTML = "";
@@ -935,9 +963,7 @@ function renderSidePanel() {
         chip.className = "chip";
         chip.textContent = c.name;
         chip.title = c.text;
-        if (idx === state.current && pl.controlledBy === clientId && state.phase !== "gameover") {
-          chip.onclick = () => useCard(cardIndex);
-        }
+        if (idx === state.current && pl.controlledBy === clientId && state.phase !== "gameover") chip.onclick = () => useCard(cardIndex);
         cards.appendChild(chip);
       });
     }
@@ -949,24 +975,22 @@ function renderSidePanel() {
 function drawBoard() {
   clearBoard();
 
-  // Streets/grid
   for (let y=0; y<GRID; y++) {
     for (let x=0; x<GRID; x++) {
       const t = state.tiles[y][x];
       const px = x*TILE, py = y*TILE;
-      ctx.fillStyle = tileColor(t.type);
+
+      ctx.fillStyle = tileBaseColor(t);
       ctx.fillRect(px,py,TILE,TILE);
 
-      if (t.type === "building") drawBuildingTile(px,py,t);
-      if (t.type === "hospital") drawHospitalTile(px,py,t);
-      if (t.type === "bullets") drawBulletShopTile(px,py,t);
-      if (t.type === "spy") drawLabel(px,py,"SPY","#fff",12);
-      if (t.type === "manhole") drawLabel(px,py,"●","#fff",24);
-      if (t.type === "police") drawPoliceTile(px,py,t);
+      if (t.type === "road") drawRoadTile(px,py);
+      if (t.type === "spy") drawSpyTile(px,py);
+      if (t.type === "manhole") drawManholeTile(px,py);
+      if (t.structureId) drawStructureTile(px,py,t);
+      if (t.door) drawDoor(px,py);
 
-      if (t.door) drawDoor(px, py);
-
-      ctx.strokeStyle = "#111"; ctx.lineWidth = 1;
+      ctx.strokeStyle = "#161616";
+      ctx.lineWidth = 1;
       ctx.strokeRect(px,py,TILE,TILE);
     }
   }
@@ -976,8 +1000,8 @@ function drawBoard() {
   state.roadBlocks.forEach(r => {
     const px = r.x*TILE, py = r.y*TILE;
     ctx.fillStyle = "#9b111e";
-    ctx.fillRect(px+5, py+15, TILE-10, 10);
-    ctx.fillRect(px+15, py+5, 10, TILE-10);
+    ctx.fillRect(px+5, py+13, TILE-10, 10);
+    ctx.fillRect(px+13, py+5, 10, TILE-10);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(px+5,py+5,TILE-10,TILE-10);
   });
 
@@ -987,46 +1011,134 @@ function drawBoard() {
 
 function clearBoard() {
   ctx.clearRect(0,0,boardCanvas.width,boardCanvas.height);
-  ctx.fillStyle = "#f5e64a";
+  ctx.fillStyle = "#f6e44c";
   ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
 }
 
-function tileColor(type) {
-  return {
-    street:"#f5e64a", building:"#333", hospital:"#fffbdb", bullets:"#795548",
-    spy:"#00a3ff", manhole:"#111", police:"#ff8c00"
-  }[type] || "#f5e64a";
+function tileBaseColor(t) {
+  if (t.type === "road") return "#f6e44c";
+  if (t.type === "spy") return "#00a3ff";
+  if (t.type === "manhole") return "#111";
+  if (t.subtype === "hospital") return "#fffbdf";
+  if (t.subtype === "bullets") return "#8b5a3c";
+  if (t.subtype === "police") return "#ff8c00";
+  if (t.subtype === "hotel" || t.subtype === "tower") return "#3b536a";
+  if (t.subtype === "bank" || t.subtype === "office") return "#3d7b4f";
+  if (t.subtype === "club" || t.subtype === "safehouse") return "#7e4a91";
+  if (t.subtype === "warehouse" || t.subtype === "garage") return "#595959";
+  return "#444";
 }
 
-function drawBuildingTile(px,py,t) {
-  ctx.fillStyle = "#3d3d3d"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
-  ctx.fillStyle = "#ffd84a";
-  ctx.fillRect(px+10,py+10,5,5); ctx.fillRect(px+24,py+10,5,5);
-  ctx.fillRect(px+10,py+24,5,5); ctx.fillRect(px+24,py+24,5,5);
+function drawRoadTile(px,py) {
+  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillRect(px+2, py+2, TILE-4, TILE-4);
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.fillRect(px + TILE/2 - 1, py + 6, 2, TILE - 12);
 }
 
-function drawHospitalTile(px,py,t) {
-  ctx.fillStyle = "#fff6df"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
-  ctx.fillStyle = "#d71920";
-  ctx.fillRect(px+17,py+9,6,22); ctx.fillRect(px+9,py+17,22,6);
+function drawSpyTile(px,py) {
+  ctx.fillStyle = "#00a3ff";
+  ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+  ctx.fillStyle = "#fff";
+  ctx.font = "900 10px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("SPY", px + TILE/2, py + TILE/2);
 }
 
-function drawBulletShopTile(px,py,t) {
-  ctx.fillStyle = "#795548"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
-  ctx.fillStyle = "#fff"; ctx.font = "900 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillText("B", px+TILE/2, py+TILE/2);
+function drawManholeTile(px,py) {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+  ctx.strokeStyle = "#999";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px + TILE/2, py + TILE/2, 9, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle = "#ccc";
+  ctx.font = "900 12px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("M", px + TILE/2, py + TILE/2);
 }
 
-function drawPoliceTile(px,py,t) {
-  ctx.fillStyle = "#ff8c00"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
-  ctx.fillStyle = "#111"; ctx.font = "900 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillText("P", px+TILE/2, py+TILE/2);
+function drawStructureTile(px,py,t) {
+  if (t.subtype === "hospital") {
+    ctx.fillStyle = "#fff6df";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle = "#d71920";
+    ctx.fillRect(px+15,py+7,6,22);
+    ctx.fillRect(px+7,py+15,22,6);
+    return;
+  }
+  if (t.subtype === "bullets") {
+    ctx.fillStyle = "#8b5a3c";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle = "#f4d8b1";
+    ctx.fillRect(px+8,py+10,20,16);
+    ctx.fillStyle = "#111";
+    ctx.font = "900 14px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("B", px + TILE/2, py + TILE/2);
+    return;
+  }
+  if (t.subtype === "police") {
+    ctx.fillStyle = "#ff8c00";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.arc(px+TILE/2, py+TILE/2, 9, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "900 10px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("P", px + TILE/2, py + TILE/2);
+    return;
+  }
+  if (t.subtype === "hotel" || t.subtype === "tower") {
+    ctx.fillStyle = "#3b536a";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle = "#f4e06a";
+    for (let yy=8; yy<TILE-8; yy+=8) for (let xx=8; xx<TILE-8; xx+=8) ctx.fillRect(px+xx, py+yy, 4, 4);
+    return;
+  }
+  if (t.subtype === "bank" || t.subtype === "office") {
+    ctx.fillStyle = "#3d7b4f";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle = "#d7f2db";
+    ctx.fillRect(px+6, py+8, TILE-12, 4);
+    ctx.fillRect(px+6, py+16, TILE-12, 4);
+    ctx.fillRect(px+6, py+24, TILE-12, 4);
+    return;
+  }
+  if (t.subtype === "club" || t.subtype === "safehouse") {
+    ctx.fillStyle = "#7e4a91";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.strokeStyle = "#f2c3ff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px+7, py+7, TILE-14, TILE-14);
+    ctx.strokeRect(px+12, py+12, TILE-24, TILE-24);
+    return;
+  }
+  if (t.subtype === "warehouse" || t.subtype === "garage") {
+    ctx.fillStyle = "#5b5b5b";
+    ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle = "#bbb";
+    ctx.fillRect(px+7, py+11, TILE-14, 4);
+    ctx.fillRect(px+7, py+19, TILE-14, 4);
+    ctx.fillRect(px+7, py+27, TILE-14, 2);
+    return;
+  }
+
+  ctx.fillStyle = "#444";
+  ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
 }
 
-function drawDoor(px, py) {
+function drawDoor(px,py) {
   ctx.fillStyle = "#00ff90";
-  ctx.fillRect(px+12, py+12, TILE-24, TILE-24);
-  ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(px+12, py+12, TILE-24, TILE-24);
+  ctx.fillRect(px+10, py+10, TILE-20, TILE-20);
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(px+10, py+10, TILE-20, TILE-20);
 }
 
 function drawStructureLabels() {
@@ -1035,7 +1147,7 @@ function drawStructureLabels() {
     for (let x=0; x<GRID; x++) {
       const t = state.tiles[y][x];
       if (!t.structureId || !t.label) continue;
-      if (!centers[t.structureId]) centers[t.structureId] = {sumX:0,sumY:0,count:0,label:t.label};
+      if (!centers[t.structureId]) centers[t.structureId] = {sumX:0, sumY:0, count:0, label:t.label};
       centers[t.structureId].sumX += x;
       centers[t.structureId].sumY += y;
       centers[t.structureId].count += 1;
@@ -1045,36 +1157,39 @@ function drawStructureLabels() {
     const c = centers[id];
     const x = (c.sumX / c.count) * TILE + TILE/2;
     const y = (c.sumY / c.count) * TILE + TILE/2;
-    ctx.fillStyle = "#fff";
-    ctx.font = "900 10px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 3;
+    ctx.fillStyle = "#fff";
+    ctx.font = "900 9px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.strokeText(c.label, x, y);
     ctx.fillText(c.label, x, y);
   }
 }
 
-function drawLabel(px,py,text,color,size) {
-  ctx.fillStyle = color; ctx.font = `900 ${size}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(text, px+TILE/2, py+TILE/2);
-}
-
 function drawAgent(p) {
   const cx = p.pos.x*TILE+TILE/2, cy = p.pos.y*TILE+TILE/2;
-  ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(cx,cy,TILE*.35,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = p.color;
+  ctx.beginPath(); ctx.arc(cx,cy,TILE*.35,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle="#000"; ctx.lineWidth=3; ctx.stroke();
-  ctx.fillStyle="#fff"; ctx.font="900 13px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="#fff";
+  ctx.font="900 12px Arial";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
   ctx.fillText(p.name.replaceAll(".","").slice(0,3), cx, cy);
-  if (p.controlledBy === clientId) { ctx.strokeStyle="#f2c318"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(cx,cy,TILE*.44,0,Math.PI*2); ctx.stroke(); }
-  if (p.arrested) { ctx.fillStyle="#000"; ctx.font="900 9px Arial"; ctx.fillText("JAIL",cx,cy+15); }
+  if (p.controlledBy === clientId) {
+    ctx.strokeStyle="#f2c318"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(cx,cy,TILE*.45,0,Math.PI*2); ctx.stroke();
+  }
+  if (p.arrested) {
+    ctx.fillStyle="#000"; ctx.font="900 9px Arial"; ctx.fillText("JAIL",cx,cy+14);
+  }
 }
 
 function drawMoveHighlights() {
   const p = currentPlayer();
   const dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
-  ctx.fillStyle = "rgba(255,255,255,.34)";
+  ctx.fillStyle = "rgba(255,255,255,.33)";
   dirs.forEach(d => {
     const n = {x:p.pos.x+d.x, y:p.pos.y+d.y};
     if (canMoveTo(p,n).ok) ctx.fillRect(n.x*TILE,n.y*TILE,TILE,TILE);
@@ -1105,7 +1220,10 @@ function tileType(pos){ return tile(pos).type; }
 function isInsideStructure(pos){ return !!tile(pos).structureId; }
 function locationName(pos) {
   const t = tile(pos);
-  if (t.label) return t.label + (t.door ? " door" : "");
+  if (t.label && t.structureId) return t.label + (t.door ? " door" : "");
+  if (t.type === "road") return "street";
+  if (t.type === "spy") return "spy square";
+  if (t.type === "manhole") return "manhole";
   return t.type;
 }
 function isRoadBlock(pos){ return state.roadBlocks.some(r => same(r,pos)); }
