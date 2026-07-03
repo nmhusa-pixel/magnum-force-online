@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magnum Force Online — Original Style Map</title>
+  <style>
+    :root {
+      --bg:#101010; --panel:#1f1f1f; --ink:#f4f4f4; --muted:#cfcfcf;
+      --yellow:#f5e64a; --red:#e31b23; --blue:#1677d2; --purple:#9a3ba5; --green:#159447;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      background:radial-gradient(circle at top,#333,#111 50%,#050505);
+      color:var(--ink);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+    .page { max-width:1320px; margin:0 auto; padding:14px; }
+    h1 {
+      margin:4px 0 0;
+      text-align:center;
+      font-size:clamp(38px,7vw,76px);
+      color:var(--red);
+      font-weight:1000;
+      font-style:italic;
+      letter-spacing:2px;
+      text-shadow:3px 3px 0 #000, 5px 5px 0 #fff;
+      -webkit-text-stroke:1px #000;
+    }
+    .subtitle { text-align:center; color:var(--muted); margin:6px 0 14px; line-height:1.35; }
+    .layout { display:grid; grid-template-columns:minmax(360px,860px) minmax(330px,1fr); gap:16px; align-items:start; }
+    canvas {
+      width:100%; max-width:840px; aspect-ratio:1/1;
+      background:var(--yellow); border:6px solid #050505;
+      box-shadow:0 0 0 4px #777, 0 12px 34px rgba(0,0,0,.55);
+      display:block; margin:0 auto; touch-action:manipulation;
+    }
+    .panel {
+      background:rgba(30,30,30,.97); border:3px solid #555; border-radius:12px;
+      padding:12px; box-shadow:0 10px 28px rgba(0,0,0,.35);
+    }
+    .online {
+      display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;
+      padding-bottom:10px; border-bottom:1px solid #555;
+    }
+    .online input, .online select {
+      padding:9px 10px; border-radius:8px; border:0; font-weight:800;
+      min-width:0;
+    }
+    button {
+      border:0; border-radius:8px; padding:9px 10px; font-weight:900;
+      background:#2d6cdf; color:#fff; cursor:pointer;
+    }
+    button:hover { filter:brightness(1.12); }
+    button:disabled { background:#555; color:#aaa; cursor:not-allowed; filter:none; }
+    .red-btn { background:#c92222; }
+    .gold-btn { background:#f2c318; color:#111; }
+    .green-btn { background:#15803d; }
+    .status { font-size:18px; font-weight:1000; margin:10px 0; line-height:1.3; }
+    .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+    .small { color:var(--muted); font-size:13px; line-height:1.4; }
+    .room { color:#fff; font-size:14px; line-height:1.35; }
+    .room code { background:#050505; padding:2px 5px; border-radius:4px; }
+    .log {
+      height:150px; overflow-y:auto; background:#050505; border:1px solid #555;
+      border-radius:8px; padding:8px; margin:10px 0; font-size:13px; line-height:1.35;
+    }
+    .players { display:grid; gap:8px; }
+    .player {
+      border:2px solid #555; background:#282828; border-radius:10px; padding:8px;
+    }
+    .player.active { outline:3px solid #fff; background:#343434; }
+    .player.mine { box-shadow:0 0 0 3px #f2c318 inset; }
+    .player.eliminated { opacity:.55; filter:grayscale(1); }
+    .player-title { font-size:17px; font-weight:1000; margin-bottom:4px; }
+    .cards { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .chip {
+      background:#101010; border:1px solid #777; color:#fff; border-radius:999px;
+      padding:4px 7px; font-size:11px; cursor:pointer;
+    }
+    .legend { display:grid; grid-template-columns:1fr 1fr; gap:5px 8px; margin-top:10px; font-size:12px; color:#ddd; }
+    .legend span { display:flex; align-items:center; gap:6px; }
+    .swatch { width:16px; height:16px; border:1px solid #000; display:inline-block; }
+    .rules { margin-top:14px; color:#ddd; font-size:14px; line-height:1.45; }
+    .modal {
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.72); z-index:10; padding:16px;
+    }
+    .modal.show { display:flex; }
+    .modal-card {
+      max-width:600px; width:100%; background:#1c1c1c; border:3px solid #777;
+      border-radius:14px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.6);
+    }
+    .target-list { display:grid; gap:8px; margin-top:10px; }
+    @media (max-width:1050px) { .layout{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>MAGNUM FORCE!</h1>
+  <div class="subtitle">
+    Original-style city map edition: larger board, larger hospitals and bullet shops, multi-door buildings, and manhole teleporting.
+  </div>
+
+  <div class="layout">
+    <div>
+      <canvas id="board" width="840" height="840" aria-label="Magnum Force board"></canvas>
+      <div class="rules">
+        <strong>Map rules:</strong> Buildings, hospitals, and bullet shops can only be entered or exited through marked doors.
+        Once you enter a building, hospital, or bullet shop, you cannot enter and leave that structure in the same turn.
+        Landing exactly on a manhole teleports you to another manhole.
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="online">
+        <select id="playerCount">
+          <option value="2">2 players</option>
+          <option value="3">3 players</option>
+          <option value="4" selected>4 players</option>
+        </select>
+        <button id="createRoomBtn" class="green-btn">Create Room</button>
+        <input id="roomInput" placeholder="Room code" maxlength="8" />
+        <button id="joinRoomBtn">Join Room</button>
+      </div>
+
+      <div id="roomInfo" class="room">Not connected to an online room.</div>
+      <div id="status" class="status">Create or join a room.</div>
+
+      <div class="controls">
+        <button id="rollBtn" class="gold-btn">Roll to Move</button>
+        <button id="shootBtn" class="gold-btn">Shoot</button>
+        <button id="useCardBtn">Use Card</button>
+        <button id="endTurnBtn" class="green-btn">End Turn</button>
+        <button id="resetRoomBtn" class="red-btn">Reset Room</button>
+        <button id="leaveRoomBtn" class="red-btn">Leave Room</button>
+      </div>
+
+      <div id="turnInfo" class="small">Waiting for room.</div>
+
+      <div class="legend">
+        <span><i class="swatch" style="background:#f5e64a"></i> Street</span>
+        <span><i class="swatch" style="background:#333"></i> Building</span>
+        <span><i class="swatch" style="background:#fffbdb"></i> Hospital</span>
+        <span><i class="swatch" style="background:#795548"></i> Bullet Shop</span>
+        <span><i class="swatch" style="background:#00a3ff"></i> Spy Card</span>
+        <span><i class="swatch" style="background:#111"></i> Manhole</span>
+        <span><i class="swatch" style="background:#ff8c00"></i> Police</span>
+        <span><i class="swatch" style="background:#9b111e"></i> Road Block</span>
+      </div>
+
+      <div id="log" class="log"></div>
+      <div id="players" class="players"></div>
+    </aside>
+  </div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="modal-card">
+    <h2 id="modalTitle">Choose</h2>
+    <div id="modalText" class="small"></div>
+    <div id="targetList" class="target-list"></div>
+    <button id="closeModalBtn" class="red-btn" style="margin-top:12px;">Cancel</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBHpJsx1FNIcU_UzTnWwchPwfO5uHNSNC0",
+  authDomain: "magnum-force-online.firebaseapp.com",
+  databaseURL: "https://magnum-force-online-default-rtdb.firebaseio.com/",
+  projectId: "magnum-force-online",
+  storageBucket: "magnum-force-online.firebasestorage.app",
+  messagingSenderId: "378888779048",
+  appId: "1:378888779048:web:8938ac3e056014bbc74c1d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const GRID = 21;
+const TILE = 40;
+const MAX_WOUNDS = 6;
+
+const boardCanvas = document.getElementById("board");
+const ctx = boardCanvas.getContext("2d");
+
+const playerCountEl = document.getElementById("playerCount");
+const createRoomBtn = document.getElementById("createRoomBtn");
+const joinRoomBtn = document.getElementById("joinRoomBtn");
+const roomInput = document.getElementById("roomInput");
+const roomInfoEl = document.getElementById("roomInfo");
+const statusEl = document.getElementById("status");
+const turnInfoEl = document.getElementById("turnInfo");
+const logEl = document.getElementById("log");
+const playersEl = document.getElementById("players");
+
+const rollBtn = document.getElementById("rollBtn");
+const shootBtn = document.getElementById("shootBtn");
+const useCardBtn = document.getElementById("useCardBtn");
+const endTurnBtn = document.getElementById("endTurnBtn");
+const resetRoomBtn = document.getElementById("resetRoomBtn");
+const leaveRoomBtn = document.getElementById("leaveRoomBtn");
+
+const modal = document.getElementById("modal");
+const modalTitle = document.getElementById("modalTitle");
+const modalText = document.getElementById("modalText");
+const targetList = document.getElementById("targetList");
+const closeModalBtn = document.getElementById("closeModalBtn");
+
+const clientId = getClientId();
+let roomCode = null;
+let roomRef = null;
+let unsub = null;
+let state = null;
+
+const AGENTS = [
+  { name:"K.G.B.", color:"#e31b23", start:{x:0,y:0} },
+  { name:"D.I.6.", color:"#1677d2", start:{x:0,y:20} },
+  { name:"C.I.A.", color:"#9a3ba5", start:{x:20,y:0} },
+  { name:"GEPO", color:"#159447", start:{x:20,y:20} }
+];
+
+const CARD_DEFS = [
+  { name:"Grenade Blast!", text:"Take 3 wounds.", timing:"instant", action:"selfWound", amount:3 },
+  { name:"Blanks!", text:"Lose 3 bullets.", timing:"instant", action:"loseBullets", amount:3 },
+  { name:"Use Secret Weapon!", text:"Wound an enemy agent once.", timing:"held", action:"secretWeapon" },
+  { name:"Code Broken!", text:"Enemy agents reveal held spy cards.", timing:"instant", action:"codeBroken" },
+  { name:"Ricochet!", text:"Take a wound yourself.", timing:"instant", action:"selfWound", amount:1 },
+  { name:"Arms Deal!", text:"Gain 4 bullets.", timing:"instant", action:"gainBullets", amount:4 },
+  { name:"Long Range Rifle!", text:"Fire right away up to 12 spaces, using 1 bullet.", timing:"held", action:"longRangeRifle" },
+  { name:"Hi-Jack Car!", text:"Move to nearest secret bullet store.", timing:"instant", action:"hijackCar" },
+  { name:"Frisk Enemy Agents!", text:"Take 2 bullets from all enemy agents.", timing:"instant", action:"frisk" },
+  { name:"Arrested!", text:"Taken to Police Station. Escape with doubles or 2 bullets at start of a move.", timing:"instant", action:"arrested" },
+  { name:"Chopper Lift!", text:"Fly to any open non-building square.", timing:"held", action:"chopperLift" },
+  { name:"Magnum Force!", text:"Blast enemy agent inside a building if within range.", timing:"held", action:"magnumForce" },
+  { name:"Patched Up!", text:"Recover from 3 wounds.", timing:"instant", action:"heal", amount:3 },
+  { name:"Bullet Proof Vest!", text:"Blocks the next bullet wound against you.", timing:"held", action:"vest" },
+  { name:"Road Block!", text:"Place a portable road block onto any open street square.", timing:"held", action:"roadBlock" },
+  { name:"Double Cross!", text:"No value. Keep until enemy realizes.", timing:"held", action:"none" }
+];
+
+function getClientId() {
+  let id = localStorage.getItem("magnumForceClientId");
+  if (!id) {
+    id = "p_" + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("magnumForceClientId", id);
+  }
+  return id;
+}
+
+function roomPath(code) { return ref(db, "rooms/" + code); }
+
+function makeRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i=0; i<5; i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+async function createRoom() {
+  const code = makeRoomCode();
+  const count = parseInt(playerCountEl.value, 10);
+  const newState = createInitialState(count);
+  newState.roomCode = code;
+  newState.createdAt = Date.now();
+  newState.updatedAt = Date.now();
+  await set(roomPath(code), newState);
+  connectToRoom(code);
+}
+
+async function joinRoom() {
+  const code = roomInput.value.trim().toUpperCase();
+  if (!code) return alert("Enter the room code.");
+  const snap = await get(roomPath(code));
+  if (!snap.exists()) return alert("Room not found.");
+  connectToRoom(code);
+}
+
+function connectToRoom(code) {
+  roomCode = code;
+  roomRef = roomPath(code);
+  roomInput.value = code;
+  roomInfoEl.innerHTML = `Connected to room <code>${code}</code>. Share this code with the other players.`;
+  if (unsub) unsub();
+  unsub = onValue(roomRef, snap => {
+    state = snap.val();
+    render();
+  });
+}
+
+function leaveRoom() {
+  roomCode = null;
+  roomRef = null;
+  state = null;
+  if (unsub) unsub();
+  unsub = null;
+  roomInfoEl.textContent = "Not connected to an online room.";
+  logEl.innerHTML = "";
+  playersEl.innerHTML = "";
+  statusEl.textContent = "Create or join a room.";
+  turnInfoEl.textContent = "Waiting for room.";
+  clearBoard();
+  renderButtons();
+}
+
+async function saveState() {
+  if (!roomRef || !state) return;
+  state.updatedAt = Date.now();
+  await set(roomRef, state);
+}
+
+function createInitialState(count) {
+  const tiles = makeOriginalStyleBoardTiles();
+  const players = AGENTS.slice(0, count).map(a => ({
+    name:a.name, color:a.color, pos:{...a.start}, bullets:3, wounds:0, cards:[],
+    eliminated:false, arrested:false, vest:false, controlledBy:null,
+    structureEnteredThisTurn:null
+  }));
+  return {
+    mapVersion:"original-style-21x21",
+    tiles,
+    players,
+    current:0,
+    phase:"ready",
+    movementLeft:0,
+    lastRoll:null,
+    roadBlocks:[{x:9,y:0},{x:11,y:20},{x:0,y:10},{x:20,y:10}],
+    deck:shuffle([...CARD_DEFS]),
+    discard:[],
+    extraTurn:false,
+    winner:null,
+    log:["New original-style online game started. Larger map, doors, hospitals, bullet shops, and manholes are active."]
+  };
+}
+
+function makeOriginalStyleBoardTiles() {
+  const tiles = Array.from({length:GRID}, () => Array.from({length:GRID}, () => ({
+    type:"street",
+    structureId:null,
+    door:false,
+    label:null
+  })));
+
+  function set(x,y,data) {
+    if (x>=0 && x<GRID && y>=0 && y<GRID) tiles[y][x] = {...tiles[y][x], ...data};
+  }
+
+  function rect(id, type, x1, y1, x2, y2, label) {
+    for (let y=y1; y<=y2; y++) {
+      for (let x=x1; x<=x2; x++) {
+        set(x,y,{type, structureId:id, label});
+      }
+    }
+  }
+
+  function door(x,y) {
+    if (x>=0 && x<GRID && y>=0 && y<GRID) tiles[y][x].door = true;
+  }
+
+  // Large multi-tile structures inspired by the original board's dense city layout.
+  rect("b_nw1","building",2,1,5,3,"HOTEL"); door(2,2); door(5,2);
+  rect("b_nw2","building",7,1,9,4,"BANK"); door(8,4); door(7,2); door(9,2);
+  rect("b_ne1","building",12,1,15,3,"TOWER"); door(12,2); door(15,2);
+  rect("b_ne2","building",17,1,19,5,"CLUB"); door(18,5); door(17,3);
+
+  rect("h_w","hospital",1,6,4,8,"HOSPITAL"); door(4,7); door(2,6); door(2,8);
+  rect("ammo_w","bullets",6,6,8,8,"BULLETS"); door(6,7); door(8,7);
+
+  rect("b_mid1","building",10,6,12,8,"OFFICE"); door(10,7); door(12,7); door(11,8);
+  rect("h_e","hospital",15,6,19,8,"HOSPITAL"); door(15,7); door(17,6); door(17,8);
+
+  rect("b_sw1","building",2,12,5,15,"WAREHOUSE"); door(2,13); door(5,13); door(4,15);
+  rect("b_c1","building",7,11,9,14,"DEPOT"); door(8,11); door(7,13); door(9,13);
+  rect("b_c2","building",11,11,13,14,"SAFE HOUSE"); door(12,11); door(11,13); door(13,13);
+  rect("b_se1","building",15,12,18,15,"GARAGE"); door(15,13); door(18,13); door(17,15);
+
+  rect("ammo_s","bullets",7,17,9,19,"BULLETS"); door(8,17); door(7,18); door(9,18);
+  rect("police","police",11,17,13,19,"POLICE"); door(12,17); door(11,18); door(13,18);
+
+  // Spy-card spaces on streets.
+  const spySquares = [
+    [10,0],[0,5],[20,5],[5,10],[15,10],[0,15],[20,15],[10,20]
+  ];
+  spySquares.forEach(([x,y]) => set(x,y,{type:"spy", label:"SPY"}));
+
+  // Manholes placed around the city. Landing exactly on one teleports to another.
+  const manholes = [
+    [3,5],[10,5],[17,5],[3,10],[10,10],[17,10],[3,17],[17,17]
+  ];
+  manholes.forEach(([x,y]) => set(x,y,{type:"manhole", label:"MH"}));
+
+  // Keep starts clear.
+  for (const a of AGENTS) set(a.start.x,a.start.y,{type:"street", structureId:null, door:false, label:null});
+
+  return tiles;
+}
+
+async function resetRoom() {
+  if (!roomCode) return;
+  if (!confirm("Reset this online room for everyone?")) return;
+  const count = state?.players?.length || parseInt(playerCountEl.value, 10);
+  const newState = createInitialState(count);
+  newState.roomCode = roomCode;
+  newState.createdAt = Date.now();
+  newState.updatedAt = Date.now();
+  state = newState;
+  await saveState();
+}
+
+function myPlayerIndex() {
+  if (!state) return -1;
+  return state.players.findIndex(p => p.controlledBy === clientId);
+}
+
+function currentPlayer() { return state?.players?.[state.current]; }
+
+function isMyTurn() {
+  const p = currentPlayer();
+  return !!p && p.controlledBy === clientId && !p.eliminated && state.phase !== "gameover";
+}
+
+function takeSeat(index) {
+  if (!state) return;
+  if (state.players[index].controlledBy && state.players[index].controlledBy !== clientId) {
+    return alert("That agent is already taken.");
+  }
+  const already = myPlayerIndex();
+  if (already >= 0 && already !== index) state.players[already].controlledBy = null;
+  state.players[index].controlledBy = clientId;
+  addLog(`${state.players[index].name} seat taken.`);
+  saveState();
+}
+
+function releaseSeat(index) {
+  if (!state) return;
+  if (state.players[index].controlledBy === clientId) {
+    state.players[index].controlledBy = null;
+    addLog(`${state.players[index].name} seat released.`);
+    saveState();
+  }
+}
+
+function startMove() {
+  if (!isMyTurn() || state.phase !== "ready") return;
+  const p = currentPlayer();
+
+  if (p.arrested) {
+    const escape = rollDice();
+    state.lastRoll = escape;
+    if (escape[0] === escape[1]) {
+      p.arrested = false;
+      addLog(`${p.name} rolled doubles (${escape[0]}+${escape[1]}) and escaped Police Station.`);
+    } else if (p.bullets >= 2 && confirm(`${p.name} is arrested. Spend 2 bullets to blast out?`)) {
+      p.bullets -= 2;
+      p.arrested = false;
+      addLog(`${p.name} spent 2 bullets and escaped Police Station.`);
+    } else {
+      addLog(`${p.name} failed to escape arrest and loses the turn.`);
+      nextTurn();
+      saveState();
+      return;
+    }
+  }
+
+  const dice = rollDice();
+  state.lastRoll = dice;
+  state.extraTurn = dice[0] === dice[1];
+  const raw = dice[0] + dice[1];
+  state.movementLeft = Math.max(0, raw - p.wounds);
+  p.structureEnteredThisTurn = null;
+  state.phase = "moving";
+  addLog(`${p.name} rolled ${dice[0]}+${dice[1]}=${raw}. Wounds reduce movement to ${state.movementLeft}.`);
+  if (state.extraTurn) addLog(`${p.name} rolled doubles and gets another turn after this action.`);
+  if (state.movementLeft <= 0) finishAction();
+  saveState();
+}
+
+function shoot() {
+  if (!isMyTurn() || state.phase !== "ready") return;
+  const p = currentPlayer();
+  if (p.bullets <= 0) return addLogAndSave(`${p.name} has no bullets.`);
+  chooseTarget("Shoot enemy agent", "Roll two dice. If roll equals or exceeds distance, target takes 1 wound. Costs 1 bullet.", enemiesOf(p), targetIndex => {
+    const target = state.players[targetIndex];
+    if (isInsideStructure(p.pos)) {
+      addLog(`${p.name} cannot shoot while hiding inside a structure.`);
+      saveState();
+      return;
+    }
+    if (isInsideStructure(target.pos)) {
+      addLog(`${target.name} is inside a structure and cannot be shot without Magnum Force.`);
+      saveState();
+      return;
+    }
+    const dice = rollDice();
+    const range = dice[0] + dice[1];
+    const dist = distance(p.pos, target.pos);
+    p.bullets -= 1;
+    state.lastRoll = dice;
+    addLog(`${p.name} fires at ${target.name}: rolled ${range}, distance ${dist}.`);
+    if (range >= dist) wound(target, 1, `${p.name}'s shot`);
+    else addLog("The shot missed.");
+    finishAction();
+    saveState();
+  });
+}
+
+function useCardMenu() {
+  if (!state) return;
+  const idx = myPlayerIndex();
+  if (idx < 0) return alert("Take a seat first.");
+  if (!isMyTurn()) return alert("You can only use cards during your turn.");
+  const p = state.players[idx];
+  if (p.cards.length === 0) return alert("No held cards.");
+  targetList.innerHTML = "";
+  modalTitle.textContent = "Use Spy Card";
+  modalText.textContent = "Choose one of your held cards.";
+  p.cards.forEach((card, cardIndex) => {
+    const b = document.createElement("button");
+    b.textContent = `${card.name} — ${card.text}`;
+    b.onclick = () => { closeModal(); useCard(cardIndex); };
+    targetList.appendChild(b);
+  });
+  showModal();
+}
+
+function useCard(cardIndex) {
+  if (!isMyTurn()) return;
+  const p = currentPlayer();
+  const card = p.cards[cardIndex];
+  if (!card) return;
+
+  if (card.action === "none") {
+    addLog(`${p.name} reveals ${card.name}. It has no value.`);
+    discardCard(p, cardIndex);
+    saveState();
+    return;
+  }
+
+  if (card.action === "vest") {
+    p.vest = true;
+    addLog(`${p.name} activates Bullet Proof Vest. Next bullet wound is blocked.`);
+    discardCard(p, cardIndex);
+    saveState();
+    return;
+  }
+
+  if (card.action === "secretWeapon") {
+    chooseTarget("Use Secret Weapon", "Choose an enemy agent to receive 1 wound.", enemiesOf(p), targetIndex => {
+      const target = state.players[targetIndex];
+      addLog(`${p.name} uses Secret Weapon on ${target.name}.`);
+      wound(target, 1, "Secret Weapon");
+      discardCard(p, cardIndex);
+      saveState();
+    });
+    return;
+  }
+
+  if (card.action === "longRangeRifle") {
+    if (p.bullets <= 0) return addLogAndSave(`${p.name} has no bullets for Long Range Rifle.`);
+    chooseTarget("Long Range Rifle", "Choose an enemy within 12 spaces. Costs 1 bullet.", enemiesOf(p), targetIndex => {
+      const target = state.players[targetIndex];
+      const dist = distance(p.pos, target.pos);
+      if (dist > 12) return addLogAndSave(`${target.name} is too far away for Long Range Rifle.`);
+      p.bullets -= 1;
+      addLog(`${p.name} fires Long Range Rifle at ${target.name}.`);
+      wound(target, 1, "Long Range Rifle");
+      discardCard(p, cardIndex);
+      saveState();
+    });
+    return;
+  }
+
+  if (card.action === "magnumForce") {
+    chooseTarget("Magnum Force!", "Choose an enemy in a building, hospital, bullet shop, or police station and within dice-roll range.", enemiesOf(p), targetIndex => {
+      const target = state.players[targetIndex];
+      if (!isInsideStructure(target.pos)) return addLogAndSave(`${target.name} is not inside a structure.`);
+      const dice = rollDice();
+      const range = dice[0] + dice[1];
+      const dist = distance(p.pos, target.pos);
+      state.lastRoll = dice;
+      addLog(`${p.name} uses Magnum Force: rolled ${range}, distance ${dist}.`);
+      if (range >= dist) wound(target, 1, "Magnum Force");
+      else addLog("Magnum Force missed.");
+      discardCard(p, cardIndex);
+      saveState();
+    });
+    return;
+  }
+
+  if (card.action === "chopperLift") {
+    state.phase = "choosing-chopper";
+    discardCard(p, cardIndex);
+    addLog(`${p.name} uses Chopper Lift. Click any open street, spy, manhole, or road square.`);
+    saveState();
+    return;
+  }
+
+  if (card.action === "roadBlock") {
+    state.phase = "choosing-roadblock";
+    discardCard(p, cardIndex);
+    addLog(`${p.name} uses Road Block. Click any open street square.`);
+    saveState();
+  }
+}
+
+function discardCard(p, index) {
+  const card = p.cards.splice(index,1)[0];
+  if (card) state.discard.push(card);
+}
+
+function drawSpyCard(p) {
+  if (state.deck.length === 0) {
+    state.deck = shuffle(state.discard);
+    state.discard = [];
+  }
+  if (state.deck.length === 0) return;
+  const card = state.deck.shift();
+  addLog(`${p.name} drew Spy Card: ${card.name} — ${card.text}`);
+  if (card.timing === "instant") {
+    applyInstantCard(p, card);
+    state.discard.push(card);
+  } else {
+    p.cards.push(card);
+  }
+}
+
+function applyInstantCard(p, card) {
+  switch(card.action) {
+    case "selfWound": wound(p, card.amount, card.name); break;
+    case "loseBullets": {
+      const lost = Math.min(p.bullets, card.amount);
+      p.bullets -= lost;
+      addLog(`${p.name} loses ${lost} bullet(s).`);
+      break;
+    }
+    case "gainBullets":
+      p.bullets += card.amount;
+      addLog(`${p.name} gains ${card.amount} bullet(s).`);
+      break;
+    case "codeBroken":
+      addLog("Code Broken! Enemy held cards are visible in the side panel.");
+      break;
+    case "hijackCar":
+      moveToNearest(p, "bullets");
+      addLog(`${p.name} moves to the nearest secret bullet shop.`);
+      resolveSquare(p);
+      break;
+    case "frisk": {
+      let total = 0;
+      for (const enemy of enemiesOf(p).map(i => state.players[i])) {
+        const taken = Math.min(2, enemy.bullets);
+        enemy.bullets -= taken;
+        total += taken;
+      }
+      p.bullets += total;
+      addLog(`${p.name} frisks enemies and takes ${total} bullet(s).`);
+      break;
+    }
+    case "arrested":
+      p.pos = findTile("police") || {x:12,y:18};
+      p.arrested = true;
+      addLog(`${p.name} is taken to the Police Station.`);
+      break;
+    case "heal":
+      heal(p, card.amount);
+      break;
+  }
+}
+
+function finishAction() {
+  checkWin();
+  if (state.phase === "gameover") return;
+  if (state.extraTurn) {
+    state.extraTurn = false;
+    state.phase = "ready";
+    state.movementLeft = 0;
+    addLog(`${currentPlayer().name} takes an extra turn for rolling doubles.`);
+  } else {
+    nextTurn();
+  }
+}
+
+function nextTurn() {
+  state.phase = "ready";
+  state.movementLeft = 0;
+  state.lastRoll = null;
+  state.extraTurn = false;
+  if (state.players[state.current]) state.players[state.current].structureEnteredThisTurn = null;
+  let safety = 0;
+  do {
+    state.current = (state.current + 1) % state.players.length;
+    safety++;
+  } while (state.players[state.current].eliminated && safety < 20);
+}
+
+function checkWin() {
+  const alive = state.players.filter(p => !p.eliminated);
+  if (alive.length <= 1) {
+    state.phase = "gameover";
+    state.winner = alive.length === 1 ? alive[0].name : null;
+    addLog(alive.length === 1 ? `${alive[0].name} wins!` : "No agents remain.");
+  }
+}
+
+function wound(p, amount, source) {
+  if (p.vest && source !== "Secret Weapon") {
+    p.vest = false;
+    addLog(`${p.name}'s Bullet Proof Vest blocks the wound.`);
+    return;
+  }
+  p.wounds += amount;
+  addLog(`${p.name} takes ${amount} wound(s) from ${source}. Total wounds: ${p.wounds}.`);
+  if (p.wounds >= MAX_WOUNDS) {
+    p.eliminated = true;
+    p.cards.forEach(c => state.discard.push(c));
+    p.cards = [];
+    addLog(`${p.name} has been eliminated.`);
+    checkWin();
+  }
+}
+
+function heal(p, amount) {
+  const healed = Math.min(p.wounds, amount);
+  p.wounds -= healed;
+  addLog(`${p.name} recovers ${healed} wound(s).`);
+}
+
+function resolveSquare(p) {
+  const t = tile(p.pos);
+  if (t.type === "hospital") {
+    const before = p.wounds;
+    p.wounds = 0;
+    addLog(`${p.name} enters hospital and recovers ${before} wound(s).`);
+  } else if (t.type === "bullets") {
+    p.bullets += 6;
+    addLog(`${p.name} enters a bullet shop and gains 6 bullets.`);
+  } else if (t.type === "spy") {
+    drawSpyCard(p);
+  } else if (t.type === "manhole") {
+    teleportManhole(p);
+  } else if (t.type === "police") {
+    addLog(`${p.name} is at the Police Station.`);
+  }
+}
+
+function teleportManhole(p) {
+  const manholes = allTilesOfType("manhole").filter(m => !same(m, p.pos));
+  if (!manholes.length) return;
+  chooseManholeDestination(p, manholes);
+}
+
+function chooseManholeDestination(p, manholes) {
+  // Current implementation: random destination to keep online state simple and avoid interrupting the move with another modal.
+  const dest = manholes[Math.floor(Math.random()*manholes.length)];
+  p.pos = {...dest};
+  addLog(`${p.name} drops through a manhole and emerges at ${dest.x},${dest.y}.`);
+}
+
+function onCanvasClick(event) {
+  if (!state || !isMyTurn()) return;
+  const rect = boardCanvas.getBoundingClientRect();
+  const scaleX = boardCanvas.width / rect.width;
+  const scaleY = boardCanvas.height / rect.height;
+  const pos = {
+    x: Math.floor((event.clientX - rect.left) * scaleX / TILE),
+    y: Math.floor((event.clientY - rect.top) * scaleY / TILE)
+  };
+  if (!inBounds(pos)) return;
+  const p = currentPlayer();
+
+  if (state.phase === "moving") {
+    if (state.movementLeft <= 0) return;
+    if (distance(p.pos, pos) !== 1) return addLogAndSave("Move one adjacent square at a time.");
+    const moveCheck = canMoveTo(p, pos);
+    if (!moveCheck.ok) return addLogAndSave(moveCheck.reason);
+
+    const fromStructure = tile(p.pos).structureId;
+    const toStructure = tile(pos).structureId;
+    if (!fromStructure && toStructure) p.structureEnteredThisTurn = toStructure;
+
+    p.pos = pos;
+    state.movementLeft -= 1;
+    addLog(`${p.name} moves to ${pos.x},${pos.y}. Movement left: ${state.movementLeft}.`);
+
+    if (state.movementLeft === 0) {
+      resolveSquare(p);
+      finishAction();
+    }
+    saveState();
+    return;
+  }
+
+  if (state.phase === "choosing-roadblock") {
+    if (tile(pos).type !== "street" || playerAt(pos) !== -1 || isRoadBlock(pos)) {
+      return addLogAndSave("Road block must be placed on an open street square.");
+    }
+    state.roadBlocks.push(pos);
+    addLog(`${p.name} places a road block.`);
+    state.phase = "ready";
+    saveState();
+    return;
+  }
+
+  if (state.phase === "choosing-chopper") {
+    if (isInsideStructure(pos) || playerAt(pos) !== -1 || isRoadBlock(pos)) {
+      return addLogAndSave("Chopper Lift must land on an open non-structure square.");
+    }
+    p.pos = pos;
+    addLog(`${p.name} flies by Chopper Lift.`);
+    resolveSquare(p);
+    state.phase = "ready";
+    saveState();
+  }
+}
+
+function canMoveTo(player, pos) {
+  if (!inBounds(pos)) return {ok:false, reason:"Out of bounds."};
+  if (isRoadBlock(pos)) return {ok:false, reason:"A road block blocks that square."};
+  if (playerAt(pos) !== -1) return {ok:false, reason:"Another agent occupies that square."};
+
+  const from = tile(player.pos);
+  const to = tile(pos);
+
+  const fromStruct = from.structureId;
+  const toStruct = to.structureId;
+
+  // Street/special non-structure movement.
+  if (!fromStruct && !toStruct) return {ok:true};
+
+  // Entering a structure from the street must use a marked door.
+  if (!fromStruct && toStruct) {
+    if (!to.door) return {ok:false, reason:"You must enter that structure through a marked door."};
+    return {ok:true};
+  }
+
+  // Moving within the same structure is allowed.
+  if (fromStruct && toStruct && fromStruct === toStruct) return {ok:true};
+
+  // Moving directly from one structure to another is not allowed.
+  if (fromStruct && toStruct && fromStruct !== toStruct) {
+    return {ok:false, reason:"You must leave the current structure before entering another."};
+  }
+
+  // Exiting a structure must leave from a marked door tile, and cannot be in same turn as entry.
+  if (fromStruct && !toStruct) {
+    if (!from.door) return {ok:false, reason:"You must exit from a marked door."};
+    if (player.structureEnteredThisTurn === fromStruct) {
+      return {ok:false, reason:"You cannot enter and leave the same structure in one turn."};
+    }
+    return {ok:true};
+  }
+
+  return {ok:true};
+}
+
+function render() {
+  if (!state) {
+    clearBoard();
+    renderButtons();
+    return;
+  }
+  drawBoard();
+  renderSidePanel();
+  renderButtons();
+}
+
+function renderButtons() {
+  const myTurn = isMyTurn();
+  rollBtn.disabled = !myTurn || !state || state.phase !== "ready";
+  shootBtn.disabled = !myTurn || !state || state.phase !== "ready" || currentPlayer().bullets <= 0;
+  useCardBtn.disabled = !myTurn || !state || currentPlayer().cards.length === 0 || state.phase === "gameover";
+  endTurnBtn.disabled = !myTurn || !state || state.phase === "gameover";
+  resetRoomBtn.disabled = !state;
+  leaveRoomBtn.disabled = !state;
+}
+
+function renderSidePanel() {
+  const p = currentPlayer();
+  if (state.phase === "gameover") {
+    statusEl.textContent = state.winner ? `${state.winner} wins!` : "Game over.";
+  } else {
+    const seatNote = p.controlledBy === clientId ? " — your turn" : p.controlledBy ? " — waiting for player" : " — no one has taken this seat";
+    statusEl.textContent = `${p.name}'s turn${seatNote}`;
+  }
+
+  let info = "";
+  if (state.lastRoll) info += `Last dice roll: ${state.lastRoll[0]} + ${state.lastRoll[1]} = ${state.lastRoll[0]+state.lastRoll[1]}<br>`;
+  if (state.phase === "moving") info += `Movement left: ${state.movementLeft}. Current player clicks adjacent squares.<br>`;
+  if (state.phase === "choosing-roadblock") info += `Road Block: current player clicks an open street square.<br>`;
+  if (state.phase === "choosing-chopper") info += `Chopper Lift: current player clicks an open non-structure square.<br>`;
+  turnInfoEl.innerHTML = info || "Choose an action when it is your agent's turn.";
+
+  logEl.innerHTML = "";
+  (state.log || []).slice().reverse().forEach(t => {
+    const div = document.createElement("div");
+    div.textContent = t;
+    logEl.appendChild(div);
+  });
+
+  playersEl.innerHTML = "";
+  state.players.forEach((pl, idx) => {
+    const div = document.createElement("div");
+    div.className = "player" + (idx === state.current ? " active" : "") + (pl.controlledBy === clientId ? " mine" : "") + (pl.eliminated ? " eliminated" : "");
+    div.innerHTML = `
+      <div class="player-title" style="color:${pl.color}">${pl.name}${pl.eliminated ? " — ELIMINATED" : ""}</div>
+      <div class="small">
+        Seat: ${pl.controlledBy ? (pl.controlledBy === clientId ? "You" : "Taken") : "Open"}<br>
+        Position: ${pl.pos.x},${pl.pos.y}<br>
+        Location: ${locationName(pl.pos)}<br>
+        Bullets: ${pl.bullets} | Wounds: ${pl.wounds}/${MAX_WOUNDS}<br>
+        Status: ${pl.arrested ? "Arrested" : "Active"} ${pl.vest ? "| Vest active" : ""}
+      </div>
+    `;
+    const seatBtn = document.createElement("button");
+    seatBtn.textContent = pl.controlledBy === clientId ? "Release Seat" : "Take Seat";
+    seatBtn.disabled = !!pl.controlledBy && pl.controlledBy !== clientId;
+    seatBtn.onclick = () => pl.controlledBy === clientId ? releaseSeat(idx) : takeSeat(idx);
+    div.appendChild(seatBtn);
+
+    const cards = document.createElement("div");
+    cards.className = "cards";
+    if (pl.cards.length === 0) {
+      const span = document.createElement("span");
+      span.className = "small";
+      span.textContent = "No held cards";
+      cards.appendChild(span);
+    } else {
+      pl.cards.forEach((c, cardIndex) => {
+        const chip = document.createElement("button");
+        chip.className = "chip";
+        chip.textContent = c.name;
+        chip.title = c.text;
+        if (idx === state.current && pl.controlledBy === clientId && state.phase !== "gameover") {
+          chip.onclick = () => useCard(cardIndex);
+        }
+        cards.appendChild(chip);
+      });
+    }
+    div.appendChild(cards);
+    playersEl.appendChild(div);
+  });
+}
+
+function drawBoard() {
+  clearBoard();
+
+  // Streets/grid
+  for (let y=0; y<GRID; y++) {
+    for (let x=0; x<GRID; x++) {
+      const t = state.tiles[y][x];
+      const px = x*TILE, py = y*TILE;
+      ctx.fillStyle = tileColor(t.type);
+      ctx.fillRect(px,py,TILE,TILE);
+
+      if (t.type === "building") drawBuildingTile(px,py,t);
+      if (t.type === "hospital") drawHospitalTile(px,py,t);
+      if (t.type === "bullets") drawBulletShopTile(px,py,t);
+      if (t.type === "spy") drawLabel(px,py,"SPY","#fff",12);
+      if (t.type === "manhole") drawLabel(px,py,"●","#fff",24);
+      if (t.type === "police") drawPoliceTile(px,py,t);
+
+      if (t.door) drawDoor(px, py);
+
+      ctx.strokeStyle = "#111"; ctx.lineWidth = 1;
+      ctx.strokeRect(px,py,TILE,TILE);
+    }
+  }
+
+  drawStructureLabels();
+
+  state.roadBlocks.forEach(r => {
+    const px = r.x*TILE, py = r.y*TILE;
+    ctx.fillStyle = "#9b111e";
+    ctx.fillRect(px+5, py+15, TILE-10, 10);
+    ctx.fillRect(px+15, py+5, 10, TILE-10);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(px+5,py+5,TILE-10,TILE-10);
+  });
+
+  state.players.forEach(p => { if (!p.eliminated) drawAgent(p); });
+  if (state.phase === "moving") drawMoveHighlights();
+}
+
+function clearBoard() {
+  ctx.clearRect(0,0,boardCanvas.width,boardCanvas.height);
+  ctx.fillStyle = "#f5e64a";
+  ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
+}
+
+function tileColor(type) {
+  return {
+    street:"#f5e64a", building:"#333", hospital:"#fffbdb", bullets:"#795548",
+    spy:"#00a3ff", manhole:"#111", police:"#ff8c00"
+  }[type] || "#f5e64a";
+}
+
+function drawBuildingTile(px,py,t) {
+  ctx.fillStyle = "#3d3d3d"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+  ctx.fillStyle = "#ffd84a";
+  ctx.fillRect(px+10,py+10,5,5); ctx.fillRect(px+24,py+10,5,5);
+  ctx.fillRect(px+10,py+24,5,5); ctx.fillRect(px+24,py+24,5,5);
+}
+
+function drawHospitalTile(px,py,t) {
+  ctx.fillStyle = "#fff6df"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+  ctx.fillStyle = "#d71920";
+  ctx.fillRect(px+17,py+9,6,22); ctx.fillRect(px+9,py+17,22,6);
+}
+
+function drawBulletShopTile(px,py,t) {
+  ctx.fillStyle = "#795548"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+  ctx.fillStyle = "#fff"; ctx.font = "900 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("B", px+TILE/2, py+TILE/2);
+}
+
+function drawPoliceTile(px,py,t) {
+  ctx.fillStyle = "#ff8c00"; ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+  ctx.fillStyle = "#111"; ctx.font = "900 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("P", px+TILE/2, py+TILE/2);
+}
+
+function drawDoor(px, py) {
+  ctx.fillStyle = "#00ff90";
+  ctx.fillRect(px+12, py+12, TILE-24, TILE-24);
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(px+12, py+12, TILE-24, TILE-24);
+}
+
+function drawStructureLabels() {
+  const centers = {};
+  for (let y=0; y<GRID; y++) {
+    for (let x=0; x<GRID; x++) {
+      const t = state.tiles[y][x];
+      if (!t.structureId || !t.label) continue;
+      if (!centers[t.structureId]) centers[t.structureId] = {sumX:0,sumY:0,count:0,label:t.label};
+      centers[t.structureId].sumX += x;
+      centers[t.structureId].sumY += y;
+      centers[t.structureId].count += 1;
+    }
+  }
+  for (const id in centers) {
+    const c = centers[id];
+    const x = (c.sumX / c.count) * TILE + TILE/2;
+    const y = (c.sumY / c.count) * TILE + TILE/2;
+    ctx.fillStyle = "#fff";
+    ctx.font = "900 10px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 3;
+    ctx.strokeText(c.label, x, y);
+    ctx.fillText(c.label, x, y);
+  }
+}
+
+function drawLabel(px,py,text,color,size) {
+  ctx.fillStyle = color; ctx.font = `900 ${size}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(text, px+TILE/2, py+TILE/2);
+}
+
+function drawAgent(p) {
+  const cx = p.pos.x*TILE+TILE/2, cy = p.pos.y*TILE+TILE/2;
+  ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(cx,cy,TILE*.35,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#000"; ctx.lineWidth=3; ctx.stroke();
+  ctx.fillStyle="#fff"; ctx.font="900 13px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText(p.name.replaceAll(".","").slice(0,3), cx, cy);
+  if (p.controlledBy === clientId) { ctx.strokeStyle="#f2c318"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(cx,cy,TILE*.44,0,Math.PI*2); ctx.stroke(); }
+  if (p.arrested) { ctx.fillStyle="#000"; ctx.font="900 9px Arial"; ctx.fillText("JAIL",cx,cy+15); }
+}
+
+function drawMoveHighlights() {
+  const p = currentPlayer();
+  const dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+  ctx.fillStyle = "rgba(255,255,255,.34)";
+  dirs.forEach(d => {
+    const n = {x:p.pos.x+d.x, y:p.pos.y+d.y};
+    if (canMoveTo(p,n).ok) ctx.fillRect(n.x*TILE,n.y*TILE,TILE,TILE);
+  });
+}
+
+function chooseTarget(title, text, targetIndexes, callback) {
+  targetList.innerHTML = "";
+  modalTitle.textContent = title;
+  modalText.textContent = text;
+  targetIndexes.forEach(i => {
+    const t = state.players[i];
+    const b = document.createElement("button");
+    b.textContent = `${t.name} — bullets ${t.bullets}, wounds ${t.wounds}, distance ${distance(currentPlayer().pos,t.pos)}`;
+    b.style.background = t.color;
+    b.onclick = () => { closeModal(); callback(i); };
+    targetList.appendChild(b);
+  });
+  if (targetIndexes.length === 0) targetList.textContent = "No valid targets.";
+  showModal();
+}
+
+function showModal(){ modal.classList.add("show"); }
+function closeModal(){ modal.classList.remove("show"); targetList.innerHTML = ""; }
+
+function tile(pos){ return inBounds(pos) ? state.tiles[pos.y][pos.x] : {type:"void", structureId:null, door:false}; }
+function tileType(pos){ return tile(pos).type; }
+function isInsideStructure(pos){ return !!tile(pos).structureId; }
+function locationName(pos) {
+  const t = tile(pos);
+  if (t.label) return t.label + (t.door ? " door" : "");
+  return t.type;
+}
+function isRoadBlock(pos){ return state.roadBlocks.some(r => same(r,pos)); }
+function playerAt(pos){ return state.players.findIndex(p => !p.eliminated && same(p.pos,pos)); }
+function enemiesOf(p){ return state.players.map((pl,i)=>({pl,i})).filter(o => !o.pl.eliminated && o.pl !== p).map(o => o.i); }
+function rollDice(){ return [rand(1,6), rand(1,6)]; }
+function addLog(text){ state.log = state.log || []; state.log.push(text); if (state.log.length > 100) state.log = state.log.slice(-100); }
+function addLogAndSave(text){ addLog(text); saveState(); }
+function moveToNearest(p,type){ const spots=allTilesOfType(type); spots.sort((a,b)=>distance(p.pos,a)-distance(p.pos,b)); if(spots.length) p.pos={...spots[0]}; }
+function allTilesOfType(type){ const arr=[]; for(let y=0;y<GRID;y++) for(let x=0;x<GRID;x++) if(state.tiles[y][x].type===type) arr.push({x,y}); return arr; }
+function findTile(type){ return allTilesOfType(type)[0] || null; }
+function same(a,b){ return a.x===b.x && a.y===b.y; }
+function inBounds(p){ return p.x>=0 && p.x<GRID && p.y>=0 && p.y<GRID; }
+function distance(a,b){ return Math.abs(a.x-b.x)+Math.abs(a.y-b.y); }
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+createRoomBtn.addEventListener("click", createRoom);
+joinRoomBtn.addEventListener("click", joinRoom);
+resetRoomBtn.addEventListener("click", resetRoom);
+leaveRoomBtn.addEventListener("click", leaveRoom);
+rollBtn.addEventListener("click", startMove);
+shootBtn.addEventListener("click", shoot);
+useCardBtn.addEventListener("click", useCardMenu);
+endTurnBtn.addEventListener("click", () => { if (isMyTurn()) { addLog(`${currentPlayer().name} ends turn.`); nextTurn(); saveState(); }});
+boardCanvas.addEventListener("click", onCanvasClick);
+closeModalBtn.addEventListener("click", closeModal);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+render();
+</script>
+</body>
+</html>
