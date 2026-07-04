@@ -3,24 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Magnum Force Online — Classic Maze Edition</title>
+  <title>Magnum Force Online — Classic Maze Refined</title>
   <style>
     :root {
       --bg:#101010; --panel:#1f1f1f; --ink:#f4f4f4; --muted:#cfcfcf;
       --yellow:#f6e44c; --red:#e31b23; --blue:#1677d2; --purple:#9a3ba5; --green:#159447;
+      --paper:#e6d27d;
     }
     * { box-sizing:border-box; }
     body {
       margin:0;
-      background:radial-gradient(circle at top,#373737,#111 52%,#050505);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255,255,255,.08), transparent 22%),
+        radial-gradient(circle at top,#3a3a3a,#111 52%,#050505);
       color:var(--ink);
       font-family:Arial,Helvetica,sans-serif;
     }
-    .page { max-width:1380px; margin:0 auto; padding:14px; }
+    .page { max-width:1420px; margin:0 auto; padding:14px; }
     h1 {
       margin:4px 0 0;
       text-align:center;
-      font-size:clamp(38px,7vw,76px);
+      font-size:clamp(38px,7vw,78px);
       color:var(--red);
       font-weight:1000;
       font-style:italic;
@@ -30,13 +33,13 @@
     }
     .subtitle {
       text-align:center; color:var(--muted); margin:6px 0 14px; line-height:1.35;
-      max-width:1000px; margin-left:auto; margin-right:auto;
+      max-width:1040px; margin-left:auto; margin-right:auto;
     }
-    .layout { display:grid; grid-template-columns:minmax(360px,900px) minmax(330px,1fr); gap:16px; align-items:start; }
+    .layout { display:grid; grid-template-columns:minmax(360px,900px) minmax(350px,1fr); gap:16px; align-items:start; }
     canvas {
       width:100%; max-width:900px; aspect-ratio:1/1;
-      background:var(--yellow); border:6px solid #050505;
-      box-shadow:0 0 0 4px #777, 0 12px 34px rgba(0,0,0,.55);
+      background:var(--paper); border:8px solid #050505;
+      box-shadow:0 0 0 4px #888, 0 0 0 8px #222, 0 12px 34px rgba(0,0,0,.6);
       display:block; margin:0 auto; touch-action:manipulation;
     }
     .panel {
@@ -77,11 +80,32 @@
     .player.mine { box-shadow:0 0 0 3px #f2c318 inset; }
     .player.eliminated { opacity:.55; filter:grayscale(1); }
     .player-title { font-size:17px; font-weight:1000; margin-bottom:4px; }
+    .agent-bars {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      margin:6px 0;
+      font-size:12px;
+    }
+    .meter {
+      background:#111;
+      border:1px solid #666;
+      border-radius:999px;
+      overflow:hidden;
+      height:14px;
+    }
+    .meter > i {
+      display:block;
+      height:100%;
+      background:#c92222;
+    }
+    .meter.ammo > i { background:#f2c318; }
     .cards { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
     .chip {
       background:#101010; border:1px solid #777; color:#fff; border-radius:999px;
       padding:4px 7px; font-size:11px; cursor:pointer;
     }
+    .chip:hover { background:#333; }
     .legend { display:grid; grid-template-columns:1fr 1fr; gap:5px 8px; margin-top:10px; font-size:12px; color:#ddd; }
     .legend span { display:flex; align-items:center; gap:6px; }
     .swatch { width:16px; height:16px; border:1px solid #000; display:inline-block; }
@@ -92,30 +116,36 @@
     }
     .modal.show { display:flex; }
     .modal-card {
-      max-width:620px; width:100%; background:#1c1c1c; border:3px solid #777;
+      max-width:660px; width:100%; background:#1c1c1c; border:3px solid #777;
       border-radius:14px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.6);
     }
     .target-list { display:grid; gap:8px; margin-top:10px; }
-    @media (max-width:1080px) { .layout{grid-template-columns:1fr;} }
+    .cardline {
+      padding:7px;
+      background:#111;
+      border:1px solid #666;
+      border-radius:8px;
+      font-size:13px;
+      line-height:1.35;
+    }
+    @media (max-width:1120px) { .layout{grid-template-columns:1fr;} }
   </style>
 </head>
 <body>
 <div class="page">
   <h1>MAGNUM FORCE!</h1>
   <div class="subtitle">
-    Classic Maze Edition: a denser handcrafted city board with single-tile street corridors,
-    more distinct building graphics, larger hospitals and bullet shops, multi-door buildings,
-    and manhole teleports across the map.
+    Refined Classic Maze Edition: tighter single-file street corridors, retro printed-board styling,
+    distinct structures, selectable manhole exits, and a clearer agent/card dashboard.
   </div>
 
   <div class="layout">
     <div>
       <canvas id="board" width="900" height="900" aria-label="Magnum Force board"></canvas>
       <div class="rules">
-        <strong>Board rules:</strong> streets are single-tile corridors between dense city blocks.
-        Structures may only be entered and exited through green door tiles. Once you enter a structure,
-        you cannot leave that same structure until a later turn. Landing exactly on a manhole teleports
-        you across the city.
+        <strong>Board rules:</strong> move one highlighted square at a time after rolling. Structures require
+        green door entry/exit. You cannot enter and leave the same structure in one turn. Landing on a manhole
+        lets you choose another manhole exit.
       </div>
     </div>
 
@@ -146,13 +176,13 @@
       <div id="turnInfo" class="small">Waiting for room.</div>
 
       <div class="legend">
-        <span><i class="swatch" style="background:#f6e44c"></i> Street</span>
-        <span><i class="swatch" style="background:#3b536a"></i> Hotel / Tower</span>
-        <span><i class="swatch" style="background:#3d7b4f"></i> Bank / Office</span>
+        <span><i class="swatch" style="background:#d7bf3e"></i> Alley / street</span>
+        <span><i class="swatch" style="background:#3b536a"></i> Hotel / tower</span>
+        <span><i class="swatch" style="background:#3d7b4f"></i> Bank / office</span>
         <span><i class="swatch" style="background:#fffbdf"></i> Hospital</span>
-        <span><i class="swatch" style="background:#8b5a3c"></i> Bullet Shop</span>
-        <span><i class="swatch" style="background:#7e4a91"></i> Club / Safe House</span>
-        <span><i class="swatch" style="background:#555"></i> Warehouse / Garage</span>
+        <span><i class="swatch" style="background:#8b5a3c"></i> Bullet shop</span>
+        <span><i class="swatch" style="background:#7e4a91"></i> Club / safe house</span>
+        <span><i class="swatch" style="background:#555"></i> Warehouse / garage</span>
         <span><i class="swatch" style="background:#00a3ff"></i> Spy</span>
         <span><i class="swatch" style="background:#111"></i> Manhole</span>
         <span><i class="swatch" style="background:#ff8c00"></i> Police</span>
@@ -225,6 +255,7 @@ let roomCode = null;
 let roomRef = null;
 let unsub = null;
 let state = null;
+let pendingManholePlayerIndex = null;
 
 const AGENTS = [
   { name:"K.G.B.", color:"#e31b23", start:{x:0,y:0} },
@@ -323,7 +354,7 @@ async function saveState() {
 }
 
 function createInitialState(count) {
-  const tiles = makeClassicMazeBoard();
+  const tiles = makeRefinedClassicMazeBoard();
   const players = AGENTS.slice(0, count).map(a => ({
     name:a.name,
     color:a.color,
@@ -338,7 +369,7 @@ function createInitialState(count) {
     structureEnteredThisTurn:null
   }));
   return {
-    mapVersion:"classic-maze-25x25",
+    mapVersion:"classic-maze-refined-25x25",
     tiles,
     players,
     current:0,
@@ -350,17 +381,18 @@ function createInitialState(count) {
     discard:[],
     extraTurn:false,
     winner:null,
-    log:["New Classic Maze Edition game started. Dense city blocks, single-lane streets, multi-door buildings, and manholes are active."]
+    log:["New Refined Classic Maze game started. Single-lane corridors, selectable manholes, and enhanced dashboards are active."]
   };
 }
 
-function makeClassicMazeBoard() {
+function makeRefinedClassicMazeBoard() {
   const tiles = Array.from({length:GRID}, () => Array.from({length:GRID}, () => ({
     type:"road",
     structureId:null,
     door:false,
     label:null,
-    subtype:null
+    subtype:null,
+    district:null
   })));
 
   function set(x,y,data) {
@@ -371,70 +403,68 @@ function makeClassicMazeBoard() {
     for (let y=y1; y<=y2; y++) for (let x=x1; x<=x2; x++) set(x,y,data);
   }
 
-  // First make everything road, then densely place structures with only single-tile corridors between them.
-  // Top band
-  fillRect(1,1,4,4,{type:"building",structureId:"hotel_nw",subtype:"hotel",label:"HOTEL"});
-  fillRect(6,1,9,4,{type:"building",structureId:"bank_n",subtype:"bank",label:"BANK"});
-  fillRect(11,1,13,5,{type:"hospital",structureId:"hospital_n",subtype:"hospital",label:"HOSPITAL"});
-  fillRect(15,1,18,4,{type:"building",structureId:"tower_n",subtype:"tower",label:"TOWER"});
-  fillRect(20,1,23,4,{type:"building",structureId:"club_ne",subtype:"club",label:"CLUB"});
+  // Dense city blocks with only one-tile corridors between most buildings.
+  fillRect(1,1,4,4,{type:"building",structureId:"hotel_nw",subtype:"hotel",label:"HOTEL",district:"NW"});
+  fillRect(6,1,9,4,{type:"building",structureId:"bank_n",subtype:"bank",label:"BANK",district:"N"});
+  fillRect(11,1,13,5,{type:"hospital",structureId:"hospital_n",subtype:"hospital",label:"HOSPITAL",district:"N"});
+  fillRect(15,1,18,4,{type:"building",structureId:"tower_n",subtype:"tower",label:"TOWER",district:"N"});
+  fillRect(20,1,23,4,{type:"building",structureId:"club_ne",subtype:"club",label:"CLUB",district:"NE"});
 
-  // Mid-upper
-  fillRect(1,6,4,9,{type:"building",structureId:"warehouse_w1",subtype:"warehouse",label:"WAREHOUSE"});
-  fillRect(6,6,9,9,{type:"bullets",structureId:"bullets_w",subtype:"bullets",label:"BULLETS"});
-  fillRect(11,7,13,9,{type:"building",structureId:"office_c1",subtype:"office",label:"OFFICE"});
-  fillRect(15,6,18,9,{type:"building",structureId:"safehouse_e1",subtype:"safehouse",label:"SAFE HOUSE"});
-  fillRect(20,6,23,9,{type:"building",structureId:"garage_e1",subtype:"garage",label:"GARAGE"});
+  fillRect(1,6,4,9,{type:"building",structureId:"warehouse_w1",subtype:"warehouse",label:"WAREHOUSE",district:"W"});
+  fillRect(6,6,9,9,{type:"bullets",structureId:"bullets_w",subtype:"bullets",label:"BULLETS",district:"W"});
+  fillRect(11,7,13,9,{type:"building",structureId:"office_c1",subtype:"office",label:"OFFICE",district:"C"});
+  fillRect(15,6,18,9,{type:"building",structureId:"safehouse_e1",subtype:"safehouse",label:"SAFE",district:"E"});
+  fillRect(20,6,23,9,{type:"building",structureId:"garage_e1",subtype:"garage",label:"GARAGE",district:"E"});
 
-  // Center band
-  fillRect(2,11,5,13,{type:"hospital",structureId:"hospital_w",subtype:"hospital",label:"HOSPITAL"});
-  fillRect(7,11,10,14,{type:"building",structureId:"depot_cw",subtype:"warehouse",label:"DEPOT"});
-  fillRect(12,11,14,14,{type:"road",structureId:null,subtype:null,label:null}); // central road plaza / corridor
-  fillRect(16,11,18,14,{type:"building",structureId:"office_ce",subtype:"office",label:"OFFICE"});
-  fillRect(20,11,23,13,{type:"hospital",structureId:"hospital_e",subtype:"hospital",label:"HOSPITAL"});
+  fillRect(1,11,5,14,{type:"hospital",structureId:"hospital_w",subtype:"hospital",label:"HOSPITAL",district:"W"});
+  fillRect(7,11,10,14,{type:"building",structureId:"depot_cw",subtype:"warehouse",label:"DEPOT",district:"C"});
+  fillRect(12,11,12,13,{type:"road",structureId:null,subtype:null,label:null,district:"PLAZA"});
+  fillRect(14,11,17,14,{type:"building",structureId:"office_ce",subtype:"office",label:"OFFICE",district:"C"});
+  fillRect(19,11,23,14,{type:"hospital",structureId:"hospital_e",subtype:"hospital",label:"HOSPITAL",district:"E"});
 
-  // Mid-lower
-  fillRect(1,15,4,18,{type:"building",structureId:"bank_sw",subtype:"bank",label:"BANK"});
-  fillRect(6,16,9,19,{type:"building",structureId:"hotel_s",subtype:"hotel",label:"HOTEL"});
-  fillRect(11,15,13,18,{type:"police",structureId:"police_s",subtype:"police",label:"POLICE"});
-  fillRect(15,16,18,19,{type:"bullets",structureId:"bullets_e",subtype:"bullets",label:"BULLETS"});
-  fillRect(20,15,23,18,{type:"building",structureId:"tower_se",subtype:"tower",label:"TOWER"});
+  fillRect(1,16,4,19,{type:"building",structureId:"bank_sw",subtype:"bank",label:"BANK",district:"SW"});
+  fillRect(6,16,9,19,{type:"building",structureId:"hotel_s",subtype:"hotel",label:"HOTEL",district:"S"});
+  fillRect(11,16,13,19,{type:"police",structureId:"police_s",subtype:"police",label:"POLICE",district:"S"});
+  fillRect(15,16,18,19,{type:"bullets",structureId:"bullets_e",subtype:"bullets",label:"BULLETS",district:"S"});
+  fillRect(20,16,23,19,{type:"building",structureId:"tower_se",subtype:"tower",label:"TOWER",district:"SE"});
 
-  // Bottom band
-  fillRect(1,20,4,23,{type:"building",structureId:"garage_sw",subtype:"garage",label:"GARAGE"});
-  fillRect(6,21,9,23,{type:"building",structureId:"safehouse_s",subtype:"safehouse",label:"SAFE HOUSE"});
-  fillRect(11,20,14,23,{type:"building",structureId:"warehouse_s",subtype:"warehouse",label:"WAREHOUSE"});
-  fillRect(16,20,18,23,{type:"building",structureId:"office_s",subtype:"office",label:"OFFICE"});
-  fillRect(20,20,23,23,{type:"building",structureId:"club_se",subtype:"club",label:"CLUB"});
+  fillRect(1,21,4,23,{type:"building",structureId:"garage_sw",subtype:"garage",label:"GARAGE",district:"SW"});
+  fillRect(6,21,9,23,{type:"building",structureId:"safehouse_s",subtype:"safehouse",label:"SAFE",district:"S"});
+  fillRect(11,21,14,23,{type:"building",structureId:"warehouse_s",subtype:"warehouse",label:"WAREHOUSE",district:"S"});
+  fillRect(16,21,18,23,{type:"building",structureId:"office_s",subtype:"office",label:"OFFICE",district:"S"});
+  fillRect(20,21,23,23,{type:"building",structureId:"club_se",subtype:"club",label:"CLUB",district:"SE"});
 
-  // Doors — all are on structure tiles adjacent to roads.
+  // Add small divider blocks to tighten paths further, while maintaining continuous corridors.
+  fillRect(5,5,5,5,{type:"building",structureId:"kiosk_1",subtype:"garage",label:"KIOSK"});
+  fillRect(10,5,10,5,{type:"building",structureId:"kiosk_2",subtype:"warehouse",label:""});
+  fillRect(14,5,14,5,{type:"building",structureId:"kiosk_3",subtype:"warehouse",label:""});
+  fillRect(19,5,19,5,{type:"building",structureId:"kiosk_4",subtype:"garage",label:""});
+  fillRect(5,15,5,15,{type:"building",structureId:"kiosk_5",subtype:"warehouse",label:""});
+  fillRect(10,15,10,15,{type:"building",structureId:"kiosk_6",subtype:"garage",label:""});
+  fillRect(14,15,14,15,{type:"building",structureId:"kiosk_7",subtype:"garage",label:""});
+  fillRect(19,15,19,15,{type:"building",structureId:"kiosk_8",subtype:"warehouse",label:""});
+
   const doors = [
     [1,2],[4,3], [7,1],[9,3], [12,1],[11,3],[13,5], [15,2],[18,3], [21,4],[20,2],
-
     [1,8],[4,7], [6,7],[9,8], [11,8],[13,7], [15,7],[18,8], [21,6],[23,8],
-
-    [2,11],[5,12], [8,11],[10,13], [16,12],[18,13], [20,12],[23,12],
-
-    [1,16],[4,17], [6,18],[9,16], [12,15],[11,17],[13,18], [15,17],[18,18], [20,16],[23,17],
-
-    [1,21],[4,22], [6,22],[9,21], [11,21],[14,22], [16,22],[18,21], [20,22],[23,21]
+    [1,12],[5,13], [8,11],[10,13], [14,12],[17,13], [19,12],[23,13],
+    [1,17],[4,18], [6,18],[9,16], [12,16],[11,18],[13,19], [15,17],[18,18], [20,17],[23,18],
+    [1,22],[4,22], [6,22],[9,21], [11,22],[14,22], [16,22],[18,21], [20,22],[23,22]
   ];
   doors.forEach(([x,y]) => {
     if (tiles[y][x].structureId) tiles[y][x].door = true;
   });
 
-  // Special road tiles
   const spySquares = [
-    [0,6],[0,18],[6,0],[18,0],[24,6],[24,18],[6,24],[18,24]
+    [0,6],[0,18],[6,0],[18,0],[24,6],[24,18],[6,24],[18,24],[12,10],[12,14]
   ];
-  spySquares.forEach(([x,y]) => set(x,y,{type:"spy",label:"SPY",subtype:"spy"}));
+  spySquares.forEach(([x,y]) => set(x,y,{type:"spy",label:"SPY",subtype:"spy",structureId:null,door:false}));
 
   const manholes = [
-    [5,5],[12,6],[19,5],[5,12],[19,12],[5,19],[12,19],[19,19]
+    [5,5],[12,6],[19,5],[5,12],[19,12],[5,19],[12,20],[19,19]
   ];
-  manholes.forEach(([x,y]) => set(x,y,{type:"manhole",label:"MH",subtype:"manhole"}));
+  manholes.forEach(([x,y]) => set(x,y,{type:"manhole",label:"MH",subtype:"manhole",structureId:null,door:false}));
 
-  // Keep starts and central road network clear
   for (const a of AGENTS) set(a.start.x,a.start.y,{type:"road",structureId:null,door:false,label:null,subtype:null});
 
   return tiles;
@@ -566,7 +596,7 @@ function useCardMenu() {
   modalText.textContent = "Choose one of your held cards.";
   p.cards.forEach((card, cardIndex) => {
     const b = document.createElement("button");
-    b.textContent = `${card.name} — ${card.text}`;
+    b.innerHTML = `<strong>${card.name}</strong><br><span>${card.text}</span>`;
     b.onclick = () => { closeModal(); useCard(cardIndex); };
     targetList.appendChild(b);
   });
@@ -789,18 +819,34 @@ function resolveSquare(p) {
   } else if (t.type === "spy") {
     drawSpyCard(p);
   } else if (t.type === "manhole") {
-    teleportManhole(p);
+    promptManholeDestination(p);
   } else if (t.type === "police") {
     addLog(`${p.name} is at the Police Station.`);
   }
 }
 
-function teleportManhole(p) {
+function promptManholeDestination(p) {
   const manholes = allTilesOfType("manhole").filter(m => !same(m, p.pos));
   if (!manholes.length) return;
-  const dest = manholes[Math.floor(Math.random()*manholes.length)];
-  p.pos = {...dest};
-  addLog(`${p.name} drops through a manhole and emerges at ${dest.x},${dest.y}.`);
+  const playerIndex = state.players.indexOf(p);
+  pendingManholePlayerIndex = playerIndex;
+  targetList.innerHTML = "";
+  modalTitle.textContent = "Choose Manhole Exit";
+  modalText.textContent = `${p.name} landed on a manhole. Choose an exit across the city.`;
+  manholes.forEach((m, idx) => {
+    const b = document.createElement("button");
+    b.textContent = `Manhole exit ${idx + 1}: ${m.x},${m.y}`;
+    b.onclick = () => {
+      closeModal();
+      const player = state.players[pendingManholePlayerIndex];
+      player.pos = {...m};
+      addLog(`${player.name} uses the manhole and emerges at ${m.x},${m.y}.`);
+      pendingManholePlayerIndex = null;
+      saveState();
+    };
+    targetList.appendChild(b);
+  });
+  showModal();
 }
 
 function onCanvasClick(event) {
@@ -932,16 +978,20 @@ function renderSidePanel() {
 
   playersEl.innerHTML = "";
   state.players.forEach((pl, idx) => {
+    const ammoPercent = Math.min(100, (pl.bullets / 12) * 100);
+    const woundPercent = Math.min(100, (pl.wounds / MAX_WOUNDS) * 100);
     const div = document.createElement("div");
     div.className = "player" + (idx === state.current ? " active" : "") + (pl.controlledBy === clientId ? " mine" : "") + (pl.eliminated ? " eliminated" : "");
     div.innerHTML = `
       <div class="player-title" style="color:${pl.color}">${pl.name}${pl.eliminated ? " — ELIMINATED" : ""}</div>
       <div class="small">
         Seat: ${pl.controlledBy ? (pl.controlledBy === clientId ? "You" : "Taken") : "Open"}<br>
-        Position: ${pl.pos.x},${pl.pos.y}<br>
-        Location: ${locationName(pl.pos)}<br>
-        Bullets: ${pl.bullets} | Wounds: ${pl.wounds}/${MAX_WOUNDS}<br>
+        Position: ${pl.pos.x},${pl.pos.y} | ${locationName(pl.pos)}<br>
         Status: ${pl.arrested ? "Arrested" : "Active"} ${pl.vest ? "| Vest active" : ""}
+      </div>
+      <div class="agent-bars">
+        <div>Bullets: ${pl.bullets}<div class="meter ammo"><i style="width:${ammoPercent}%"></i></div></div>
+        <div>Wounds: ${pl.wounds}/${MAX_WOUNDS}<div class="meter"><i style="width:${woundPercent}%"></i></div></div>
       </div>
     `;
     const seatBtn = document.createElement("button");
@@ -975,6 +1025,13 @@ function renderSidePanel() {
 function drawBoard() {
   clearBoard();
 
+  // Printed-board border and title boxes.
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0,0,boardCanvas.width,4);
+  ctx.fillRect(0,boardCanvas.height-4,boardCanvas.width,4);
+  ctx.fillRect(0,0,4,boardCanvas.height);
+  ctx.fillRect(boardCanvas.width-4,0,4,boardCanvas.height);
+
   for (let y=0; y<GRID; y++) {
     for (let x=0; x<GRID; x++) {
       const t = state.tiles[y][x];
@@ -983,13 +1040,13 @@ function drawBoard() {
       ctx.fillStyle = tileBaseColor(t);
       ctx.fillRect(px,py,TILE,TILE);
 
-      if (t.type === "road") drawRoadTile(px,py);
+      if (t.type === "road") drawRoadTile(px,py,x,y);
       if (t.type === "spy") drawSpyTile(px,py);
       if (t.type === "manhole") drawManholeTile(px,py);
       if (t.structureId) drawStructureTile(px,py,t);
       if (t.door) drawDoor(px,py);
 
-      ctx.strokeStyle = "#161616";
+      ctx.strokeStyle = "rgba(0,0,0,.78)";
       ctx.lineWidth = 1;
       ctx.strokeRect(px,py,TILE,TILE);
     }
@@ -1011,12 +1068,12 @@ function drawBoard() {
 
 function clearBoard() {
   ctx.clearRect(0,0,boardCanvas.width,boardCanvas.height);
-  ctx.fillStyle = "#f6e44c";
+  ctx.fillStyle = "#e6d27d";
   ctx.fillRect(0,0,boardCanvas.width,boardCanvas.height);
 }
 
 function tileBaseColor(t) {
-  if (t.type === "road") return "#f6e44c";
+  if (t.type === "road") return "#d7bf3e";
   if (t.type === "spy") return "#00a3ff";
   if (t.type === "manhole") return "#111";
   if (t.subtype === "hospital") return "#fffbdf";
@@ -1029,11 +1086,22 @@ function tileBaseColor(t) {
   return "#444";
 }
 
-function drawRoadTile(px,py) {
-  ctx.fillStyle = "rgba(0,0,0,0.08)";
-  ctx.fillRect(px+2, py+2, TILE-4, TILE-4);
-  ctx.fillStyle = "rgba(255,255,255,0.25)";
-  ctx.fillRect(px + TILE/2 - 1, py + 6, 2, TILE - 12);
+function drawRoadTile(px,py,x,y) {
+  ctx.fillStyle = "#d7bf3e";
+  ctx.fillRect(px,py,TILE,TILE);
+  ctx.fillStyle = "rgba(0,0,0,0.10)";
+  ctx.fillRect(px+3, py+3, TILE-6, TILE-6);
+  // Retro maze path markings.
+  ctx.strokeStyle = "rgba(0,0,0,.32)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px + TILE/2, py + 7);
+  ctx.lineTo(px + TILE/2, py + TILE - 7);
+  ctx.stroke();
+  if ((x+y) % 3 === 0) {
+    ctx.fillStyle = "rgba(255,255,255,.18)";
+    ctx.fillRect(px+8, py+8, 5, 5);
+  }
 }
 
 function drawSpyTile(px,py) {
@@ -1049,13 +1117,16 @@ function drawSpyTile(px,py) {
 function drawManholeTile(px,py) {
   ctx.fillStyle = "#111";
   ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
-  ctx.strokeStyle = "#999";
+  ctx.strokeStyle = "#aaa";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(px + TILE/2, py + TILE/2, 9, 0, Math.PI*2);
+  ctx.arc(px + TILE/2, py + TILE/2, 10, 0, Math.PI*2);
   ctx.stroke();
-  ctx.fillStyle = "#ccc";
-  ctx.font = "900 12px Arial";
+  ctx.beginPath();
+  ctx.arc(px + TILE/2, py + TILE/2, 5, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle = "#ddd";
+  ctx.font = "900 11px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("M", px + TILE/2, py + TILE/2);
@@ -1138,7 +1209,9 @@ function drawStructureTile(px,py,t) {
 function drawDoor(px,py) {
   ctx.fillStyle = "#00ff90";
   ctx.fillRect(px+10, py+10, TILE-20, TILE-20);
-  ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(px+10, py+10, TILE-20, TILE-20);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px+10, py+10, TILE-20, TILE-20);
 }
 
 function drawStructureLabels() {
@@ -1155,6 +1228,7 @@ function drawStructureLabels() {
   }
   for (const id in centers) {
     const c = centers[id];
+    if (!c.label) continue;
     const x = (c.sumX / c.count) * TILE + TILE/2;
     const y = (c.sumY / c.count) * TILE + TILE/2;
     ctx.strokeStyle = "#000";
@@ -1189,7 +1263,7 @@ function drawAgent(p) {
 function drawMoveHighlights() {
   const p = currentPlayer();
   const dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
-  ctx.fillStyle = "rgba(255,255,255,.33)";
+  ctx.fillStyle = "rgba(255,255,255,.36)";
   dirs.forEach(d => {
     const n = {x:p.pos.x+d.x, y:p.pos.y+d.y};
     if (canMoveTo(p,n).ok) ctx.fillRect(n.x*TILE,n.y*TILE,TILE,TILE);
@@ -1213,7 +1287,7 @@ function chooseTarget(title, text, targetIndexes, callback) {
 }
 
 function showModal(){ modal.classList.add("show"); }
-function closeModal(){ modal.classList.remove("show"); targetList.innerHTML = ""; }
+function closeModal(){ modal.classList.remove("show"); targetList.innerHTML = ""; pendingManholePlayerIndex = null; }
 
 function tile(pos){ return inBounds(pos) ? state.tiles[pos.y][pos.x] : {type:"void", structureId:null, door:false}; }
 function tileType(pos){ return tile(pos).type; }
@@ -1230,7 +1304,7 @@ function isRoadBlock(pos){ return state.roadBlocks.some(r => same(r,pos)); }
 function playerAt(pos){ return state.players.findIndex(p => !p.eliminated && same(p.pos,pos)); }
 function enemiesOf(p){ return state.players.map((pl,i)=>({pl,i})).filter(o => !o.pl.eliminated && o.pl !== p).map(o => o.i); }
 function rollDice(){ return [rand(1,6), rand(1,6)]; }
-function addLog(text){ state.log = state.log || []; state.log.push(text); if (state.log.length > 100) state.log = state.log.slice(-100); }
+function addLog(text){ state.log = state.log || []; state.log.push(text); if (state.log.length > 120) state.log = state.log.slice(-120); }
 function addLogAndSave(text){ addLog(text); saveState(); }
 function moveToNearest(p,type){ const spots=allTilesOfType(type); spots.sort((a,b)=>distance(p.pos,a)-distance(p.pos,b)); if(spots.length) p.pos={...spots[0]}; }
 function allTilesOfType(type){ const arr=[]; for(let y=0;y<GRID;y++) for(let x=0;x<GRID;x++) if(state.tiles[y][x].type===type) arr.push({x,y}); return arr; }

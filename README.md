@@ -1,25 +1,19 @@
-# Magnum Force Online — Classic Maze Edition
+# Magnum Force Online — Refined Classic Maze Edition
 
-A GitHub Pages deployable online room-code prototype with a denser, more original-feeling city board.
+A GitHub Pages deployable online room-code game with a tighter classic board-game feel.
 
-## What changed in this version
+## Improvements in this version
 
-- Fixed handcrafted **25 x 25** board
-- **Single-tile street corridors** between buildings
-- Denser maze-like city layout
-- Distinct building graphics by type:
-  - hospital
-  - bullet shop
-  - police station
-  - hotel / tower
-  - bank / office
-  - club / safe house
-  - warehouse / garage
-- Multiple marked **green doors**
-- Structures can only be entered or exited through doors
-- You cannot enter and leave the same structure in one turn
-- Multiple **manholes** teleport players across the city
-- Firebase online room-code play
+- Tighter single-tile street corridors
+- Denser handcrafted 25 x 25 maze map
+- More retro printed-board styling
+- Distinct graphics by building type
+- Larger hospitals and bullet shops
+- Green door entry/exit rules
+- Selectable manhole destinations
+- Cleaner agent dashboard with ammo and wound meters
+- Improved card display
+- Firebase room-code multiplayer
 
 ## Files
 
